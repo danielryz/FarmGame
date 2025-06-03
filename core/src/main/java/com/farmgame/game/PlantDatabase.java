@@ -1,25 +1,27 @@
 package com.farmgame.game;
 
+import com.badlogic.gdx.graphics.Color;
+
 import java.util.*;
 
 public class PlantDatabase {
     private static final List<PlantType> plantTypes = new ArrayList<>();
 
     static {
-        plantTypes.add(new PlantType("Carrot", 20f));
-        plantTypes.add(new PlantType("Potato", 30f));
-        plantTypes.add(new PlantType("Wheat", 40f));
-        plantTypes.add(new PlantType("Tomato", 25f));
-        plantTypes.add(new PlantType("Corn", 35f));
-        plantTypes.add(new PlantType("Onion", 22f));
-        plantTypes.add(new PlantType("Garlic", 28f));
-        plantTypes.add(new PlantType("Lettuce", 18f));
-        plantTypes.add(new PlantType("Cabbage", 26f));
-        plantTypes.add(new PlantType("Peas", 24f));
-        plantTypes.add(new PlantType("Pumpkin", 45f));
-        plantTypes.add(new PlantType("Strawberry", 32f));
-        plantTypes.add(new PlantType("Blueberry", 38f));
-        plantTypes.add(new PlantType("Chili", 29f));
+        plantTypes.add(new PlantType("Marchew", 20f, Color.ORANGE, 15, 20));
+        plantTypes.add(new PlantType("Ziemniak", 30f, Color.BROWN, 10, 16));
+        plantTypes.add(new PlantType("Pszenica", 40f, Color.TAN, 5, 14));
+        plantTypes.add(new PlantType("Pomidor", 25f, Color.RED, 20, 24));
+        plantTypes.add(new PlantType("Kukurydza", 35f, Color.YELLOW, 10, 17));
+        plantTypes.add(new PlantType("Cebula", 22f, Color.LIGHT_GRAY, 30, 34));
+        plantTypes.add(new PlantType("Czosnek", 28f, Color.SKY, 32, 36));
+        plantTypes.add(new PlantType("Sałata", 18f, Color.LIME, 25, 29));
+        plantTypes.add(new PlantType("Kapusta", 26f, Color.FOREST, 24, 29));
+        plantTypes.add(new PlantType("Groszek", 24f, Color.GREEN, 26, 32));
+        plantTypes.add(new PlantType("Dynia", 45f, Color.ORANGE.cpy().lerp(Color.BROWN, 0.3f), 36, 44));
+        plantTypes.add(new PlantType("Truskawka", 32f, Color.SCARLET, 32, 40));
+        plantTypes.add(new PlantType("Jagoda", 38f, Color.ROYAL, 30, 38));
+        plantTypes.add(new PlantType("Chili", 29f, Color.FIREBRICK, 100, 120));
     }
 
     public static List<PlantType> getAll() {
