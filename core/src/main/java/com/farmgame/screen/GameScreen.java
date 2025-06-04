@@ -24,20 +24,18 @@ public class GameScreen implements Screen {
     private final Skin skin;
     private PlantType selectedPlant = null;
     private TextButton selectedButton = null;
-    private TextButton waterButton;
-    private TextButton harvestButton;
-    private TextButton sellAllButton;
+    private final TextButton waterButton;
+    private final TextButton harvestButton;
     private enum Action {
         PLANT,
         WATER,
         HARVEST
     }
     private Action currentAction = Action.PLANT;
-    private Inventory inventory = new Inventory();
+    private final Inventory inventory = new Inventory();
     private int money = 20;
-    private Label moneyLabel;
-    private Label inventoryLabel;
-    private Table inventoryTable;
+    private final Label moneyLabel;
+    private final Table inventoryTable;
 
     public GameScreen() {
         this.farm = new Farm(10, 10);
@@ -55,11 +53,7 @@ public class GameScreen implements Screen {
 
         this.moneyLabel = new Label("Pieniądze: " + money, skin);
         root.row();
-        root.add(moneyLabel).right().pad(10);
-
-        this.inventoryLabel = new Label("", skin);
-        root.row();
-        root.add(inventoryLabel).right().pad(10).expandX().top();
+        root.add(moneyLabel).right().top().pad(10);
 
         Table sidebar = new Table();
         sidebar.defaults().pad(4).left();
@@ -120,27 +114,7 @@ public class GameScreen implements Screen {
 
         waterButton = new TextButton("Podlej", skin);
         harvestButton = new TextButton("Zbierz", skin);
-        sellAllButton = new TextButton("Sprzedaj wszystko", skin);
-        sellAllButton.addListener(new ChangeListener() {
-            @Override
-            public void changed(ChangeEvent event, Actor actor) {
-                int earned = 0;
-
-                for (var entry : inventory.getItems().entrySet()) {
-                    String plantName = entry.getKey();
-                    int count = entry.getValue();
-
-                    PlantType type = PlantDatabase.getByName(plantName);
-                    if (type != null) {
-                        earned += count * type.getSellPrice();
-                    }
-                }
-
-                money += earned;
-                inventory.clearItem();
-                updateInventoryTable(inventoryTable);
-            }
-        });
+        TextButton sellAllButton = getSellAllButton();
         sidebar.add(sellAllButton).expandX().fillX().padTop(10).row();
 
         waterButton.addListener(new ChangeListener() {
@@ -213,6 +187,31 @@ public class GameScreen implements Screen {
         Gdx.input.setInputProcessor(new InputMultiplexer(stage, gameInput));
     }
 
+    private TextButton getSellAllButton() {
+        TextButton sellAllButton = new TextButton("Sprzedaj wszystko", skin);
+        sellAllButton.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                int earned = 0;
+
+                for (var entry : inventory.getItems().entrySet()) {
+                    String plantName = entry.getKey();
+                    int count = entry.getValue();
+
+                    PlantType type = PlantDatabase.getByName(plantName);
+                    if (type != null) {
+                        earned += count * type.getSellPrice();
+                    }
+                }
+
+                money += earned;
+                inventory.clearItem();
+                updateInventoryTable(inventoryTable);
+            }
+        });
+        return sellAllButton;
+    }
+
     @Override
     public void render(float delta) {
         farmUpdate(delta);
@@ -278,11 +277,6 @@ public class GameScreen implements Screen {
 
         moneyLabel.setText("Pieniądze: " + money);
 
-        StringBuilder sb = new StringBuilder("Magazyn:\n");
-        for (var entry : inventory.getItems().entrySet()) {
-            sb.append(entry.getKey()).append(": ").append(entry.getValue()).append("\n");
-        }
-        inventoryLabel.setText(sb.toString());
         stage.act(delta);
         stage.draw();
     }
