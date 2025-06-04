@@ -3,14 +3,17 @@ package com.farmgame.screen;
 import com.badlogic.gdx.*;
 import com.badlogic.gdx.graphics.*;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
+import com.badlogic.gdx.graphics.g2d.GlyphLayout;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
+import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.scenes.scene2d.Actor;
 import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.scenes.scene2d.ui.*;
 import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener;
 import com.badlogic.gdx.utils.Align;
 import com.badlogic.gdx.utils.viewport.ScreenViewport;
+import com.badlogic.gdx.utils.viewport.Viewport;
 import com.farmgame.game.*;
 
 public class GameScreen implements Screen {
@@ -33,14 +36,20 @@ public class GameScreen implements Screen {
     }
     private Action currentAction = Action.PLANT;
     private final Inventory inventory = new Inventory();
-    private int money = 20;
+    private int money = 100;
     private final Label moneyLabel;
     private final Table inventoryTable;
+    private final OrthographicCamera camera;
+    private final Viewport gameViewport;
 
     public GameScreen() {
         this.farm = new Farm(10, 10);
         this.shapeRenderer = new ShapeRenderer();
         this.batch = new SpriteBatch();
+        this.camera = new OrthographicCamera();
+        this.gameViewport = new ScreenViewport(camera);
+
+        font.getData().setScale(1.5f);
 
         skin = new Skin(Gdx.files.internal("assets/uiskin.json"));
         stage = new Stage(new ScreenViewport(), batch);
@@ -154,8 +163,10 @@ public class GameScreen implements Screen {
         InputAdapter gameInput = new InputAdapter() {
             @Override
             public boolean touchDown(int screenX, int screenY, int pointer, int button) {
-                int x = screenX / TILE_SIZE;
-                int y = (Gdx.graphics.getHeight() - screenY) / TILE_SIZE;
+                Vector3 worldCoords = camera.unproject(new Vector3(screenX, screenY, 0));
+                int x = (int) (worldCoords.x / TILE_SIZE);
+                int y = (int) (worldCoords.y / TILE_SIZE);
+
                 Plot plot = farm.getPlot(x, y);
                 if (plot == null) return false;
 
@@ -218,6 +229,11 @@ public class GameScreen implements Screen {
         Gdx.gl.glClearColor(0.3f, 0.5f, 0.3f, 1);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 
+        gameViewport.apply();
+        camera.update();
+        shapeRenderer.setProjectionMatrix(camera.combined);
+        batch.setProjectionMatrix(camera.combined);
+
         shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
         for (int x = 0; x < farm.getWidth(); x++) {
             for (int y = 0; y < farm.getHeight(); y++) {
@@ -262,13 +278,22 @@ public class GameScreen implements Screen {
 
                 if (plant != null && plot.getState() != Plot.State.EMPTY) {
                     float timeLeft = plant.getTimeRemaining();
-
                     String timeText = String.format("%.0f", timeLeft);
-                    float textX = x * TILE_SIZE + TILE_SIZE / 2f - 8;
-                    float textY = y * TILE_SIZE + TILE_SIZE / 2f + 5;
+
+                    GlyphLayout layout = new GlyphLayout(font, timeText);
+                    float textX = x * TILE_SIZE + (TILE_SIZE - layout.width) / 2;
+                    float textY = y * TILE_SIZE + (TILE_SIZE + layout.height) / 2;
+
 
                     font.setColor(Color.BLACK);
+                    font.draw(batch, timeText, textX-1, textY);
+                    font.draw(batch, timeText, textX+1, textY);
+                    font.draw(batch, timeText, textX, textY-1);
+                    font.draw(batch, timeText, textX, textY+1);
+
+                    font.setColor(Color.WHITE);
                     font.draw(batch, timeText, textX, textY);
+
                 }
             }
         }
@@ -320,7 +345,8 @@ public class GameScreen implements Screen {
     }
 
     @Override public void resize(int width, int height) {
-        stage.getViewport().update(width, height, true);
+        gameViewport.update(width, height, true);
+        stage.getViewport().update(width, height,true);
     }
     @Override public void show() {}
     @Override public void hide() {}
