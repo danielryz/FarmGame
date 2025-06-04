@@ -41,6 +41,8 @@ public class GameScreen implements Screen {
     private final Table inventoryTable;
     private final OrthographicCamera camera;
     private final Viewport gameViewport;
+    private final GameClock gameClock;
+    private final Label clockLabel;
 
     public GameScreen() {
         this.farm = new Farm(10, 10);
@@ -48,34 +50,40 @@ public class GameScreen implements Screen {
         this.batch = new SpriteBatch();
         this.camera = new OrthographicCamera();
         this.gameViewport = new ScreenViewport(camera);
+        this.gameClock = new GameClock();
 
         font.getData().setScale(1.5f);
 
         skin = new Skin(Gdx.files.internal("assets/uiskin.json"));
         stage = new Stage(new ScreenViewport(), batch);
-        Gdx.input.setInputProcessor(stage);
 
-        Table root = new Table();
-        root.setFillParent(true);
-        root.pad(10);
-        stage.addActor(root);
+        // Główna struktura interfejsu
+        Table mainTable = new Table();
+        mainTable.setFillParent(true);
+        stage.addActor(mainTable);
 
+        // Inicjalizacja komponentów
         this.moneyLabel = new Label("Pieniądze: " + money, skin);
-        root.row();
-        root.add(moneyLabel).right().top().pad(10);
+        this.clockLabel = new Label("", skin);
 
+        // Prawa strona z menu
+        Table rightSideMenu = new Table();
+        rightSideMenu.top();
+        rightSideMenu.pad(10);
+
+        // Górny pasek (czas i pieniądze)
+        Table topBar = new Table();
+        topBar.add(clockLabel).left().expandX();
+        topBar.add(moneyLabel).right();
+        rightSideMenu.add(topBar).fillX().expandX().padBottom(10).row();
+
+        // Kontener na przyciski i akcje
         Table sidebar = new Table();
         sidebar.defaults().pad(4).left();
 
-        ScrollPane scrollPane = new ScrollPane(sidebar, skin);
-        scrollPane.setFadeScrollBars(false);
-        scrollPane.setScrollingDisabled(false, true);
-        scrollPane.setScrollbarsOnTop(true);
-        scrollPane.setForceScroll(false, true);
-        scrollPane.setScrollingDisabled(true, false);
-
-        Table plantButtons = new Table();
+        // Sekcja roślin
         sidebar.add(new Label("Rośliny:", skin)).left().row();
+        Table plantButtons = new Table();
 
         for (PlantType type : PlantDatabase.getAll()) {
             Pixmap pixmap = new Pixmap(16, 16, Pixmap.Format.RGBA8888);
@@ -97,16 +105,13 @@ public class GameScreen implements Screen {
                 public void changed(ChangeEvent event, Actor actor) {
                     selectedPlant = type;
                     currentAction = Action.PLANT;
-
                     if (selectedButton != null) selectedButton.setColor(Color.WHITE);
                     selectedButton = button;
-                    selectedButton.setColor(Color.CYAN);
-
+                    button.setColor(Color.CYAN);
                     waterButton.setColor(Color.WHITE);
                     harvestButton.setColor(Color.WHITE);
                 }
             });
-
 
             Table row = new Table();
             row.add(colorBox).size(16).padRight(5);
@@ -116,15 +121,18 @@ public class GameScreen implements Screen {
 
             plantButtons.add(row).expandX().fillX().padBottom(6).row();
         }
-
         sidebar.add(plantButtons).expandX().fillX().row();
 
+        // Sekcja akcji
         sidebar.add(new Label("Akcje:", skin)).left().padTop(10).row();
 
         waterButton = new TextButton("Podlej", skin);
         harvestButton = new TextButton("Zbierz", skin);
         TextButton sellAllButton = getSellAllButton();
+
         sidebar.add(sellAllButton).expandX().fillX().padTop(10).row();
+        sidebar.add(waterButton).expandX().fillX().row();
+        sidebar.add(harvestButton).expandX().fillX().row();
 
         waterButton.addListener(new ChangeListener() {
             @Override
@@ -148,18 +156,24 @@ public class GameScreen implements Screen {
             }
         });
 
-        sidebar.add(waterButton).expandX().fillX().row();
-        sidebar.add(harvestButton).expandX().fillX().row();
-
+        // Sekcja magazynu
         sidebar.add(new Label("Magazyn:", skin)).left().padTop(10).row();
-
         this.inventoryTable = new Table();
         updateInventoryTable(inventoryTable);
         sidebar.add(inventoryTable).expandX().fillX().row();
 
-        root.top().right();
-        root.add(scrollPane).width(400).expandY().fillY();
+        // Dodanie scrollowania do menu
+        ScrollPane scrollPane = new ScrollPane(sidebar, skin);
+        scrollPane.setFadeScrollBars(false);
+        scrollPane.setScrollingDisabled(true, false);
 
+        rightSideMenu.add(scrollPane).expand().fill().top();
+
+        // Dodanie obszarów do głównej tabeli
+        mainTable.add().expand().fill();
+        mainTable.add(rightSideMenu).width(400).fill().top();
+
+        // Konfiguracja obsługi wejścia
         InputAdapter gameInput = new InputAdapter() {
             @Override
             public boolean touchDown(int screenX, int screenY, int pointer, int button) {
@@ -226,14 +240,19 @@ public class GameScreen implements Screen {
     @Override
     public void render(float delta) {
         farmUpdate(delta);
-        Gdx.gl.glClearColor(0.3f, 0.5f, 0.3f, 1);
+        gameClock.update(delta);
+        updateClockLabel();
+
+        Color ambientColor = getAmbientColor();
+        Gdx.gl.glClearColor(0.3f * ambientColor.r, 0.5f * ambientColor.g, 0.3f * ambientColor.b, 1);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 
         gameViewport.apply();
         camera.update();
         shapeRenderer.setProjectionMatrix(camera.combined);
         batch.setProjectionMatrix(camera.combined);
-
+        batch.setColor(ambientColor);
+        shapeRenderer.setColor(shapeRenderer.getColor().mul(ambientColor));
         shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
         for (int x = 0; x < farm.getWidth(); x++) {
             for (int y = 0; y < farm.getHeight(); y++) {
@@ -269,6 +288,7 @@ public class GameScreen implements Screen {
             }
         }
         shapeRenderer.end();
+        batch.setColor(Color.WHITE);
 
         batch.begin();
         for (int x = 0; x < farm.getWidth(); x++) {
@@ -305,13 +325,83 @@ public class GameScreen implements Screen {
         stage.draw();
     }
 
+    private boolean isGrowthPossible(){
+        GameClock.TimeOfDay timeOfDay = gameClock.getTimeOfDay();
+        return timeOfDay != GameClock.TimeOfDay.NIGHT;
+    }
+
+    private float getGrowthMultiplier(){
+       return switch (gameClock.getTimeOfDay()){
+           case MORNING -> 1.2f;
+           case NOON -> 1.5f;
+           case EVENING -> 1.0f;
+           case NIGHT -> 0.0f;
+       };
+    }
+
+
     private void farmUpdate(float delta) {
+        float growthMultiplier = getGrowthMultiplier();
+        boolean canGrow = isGrowthPossible();
+
         for (int x = 0; x < farm.getWidth(); x++) {
             for (int y = 0; y < farm.getHeight(); y++) {
-                farm.getPlot(x, y).update(delta);
+                Plot plot = farm.getPlot(x, y);
+                if (canGrow){
+                    plot.update(delta * growthMultiplier);
+                } else {
+                    plot.update(0);
+                }
             }
         }
     }
+
+    private void updateClockLabel(){
+        StringBuilder timeText = new StringBuilder();
+        timeText.append(String.format("Dzień %d (%s) - %s",
+            gameClock.getDay(),
+            getPolishWeekDay(gameClock.getWeekDay()),
+            getPolishTimeOfDay(gameClock.getTimeOfDay())
+        ));
+
+        if (!isGrowthPossible()){
+            timeText.append(" (Rośliny nie rosną)");
+        }
+        clockLabel.setText(timeText);
+    }
+
+    private String getPolishWeekDay(GameClock.WeekDay weekDay) {
+        return switch (weekDay){
+            case MONDAY -> "Poniedziałek";
+            case TUESDAY -> "Wtorek";
+            case WEDNESDAY -> "Środa";
+            case THURSDAY -> "Czwartek";
+            case FRIDAY -> "Piątek";
+            case SATURDAY -> "Sobota";
+            case SUNDAY -> "Niedziela";
+
+        };
+    }
+
+    private String getPolishTimeOfDay(GameClock.TimeOfDay timeOfDay) {
+        return switch (timeOfDay){
+            case MORNING -> "Ranek";
+            case NOON -> "Południe";
+            case EVENING -> "Wieczór";
+            case NIGHT -> "Noc";
+
+        };
+    }
+
+    private Color getAmbientColor() {
+        return switch (gameClock.getTimeOfDay()) {
+            case MORNING -> new Color(1f, 0.9f, 0.8f, 1f);
+            case NOON -> new Color(1f, 1f, 1f, 1f);
+            case EVENING -> new Color(0.8f, 0.7f, 0.6f, 1f);
+            case NIGHT -> new Color(0.4f, 0.4f, 0.5f, 1f);
+        };
+    }
+
 
     private void updateInventoryTable(Table inventoryTable) {
         inventoryTable.clear();
