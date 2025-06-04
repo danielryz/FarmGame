@@ -15,6 +15,10 @@ public class Plant {
         watered = true;
     }
 
+    public boolean isWatered() {
+        return watered;
+    }
+
     public void update(float delta){
         if (currentGrowthTime < type.getGrowthTime()){
             float speedMultiplier = watered ? 1.5f : 1.0f;
@@ -44,6 +48,10 @@ public class Plant {
 
     public float getGrowthPercent() {
         return currentGrowthTime / type.getGrowthTime();
+    }
+
+    public float getTimeRemaining() {
+        return Math.max(0, type.getGrowthTime() - currentGrowthTime);
     }
 
     public enum GrowthStage {
