@@ -188,12 +188,11 @@ public class GameScreen implements Screen {
         scrollPane.setScrollingDisabled(true, false);
 
         rightSideMenu.add(scrollPane).expand().fill().top();
-
         // Dodanie obszarów do głównej tabeli
         mainTable.add(leftSideMenu).width(200).padLeft(10).fill().top();
         mainTable.add().expand().fill();
         mainTable.add(rightSideMenu).width(400).fill().top();
-
+      
         // Konfiguracja obsługi wejścia
         InputAdapter gameInput = new InputAdapter() {
             @Override
@@ -511,7 +510,7 @@ public class GameScreen implements Screen {
         }
         return false;
     }
-
+  
     @Override public void resize(int width, int height) {
         gameViewport.update(width, height, true);
         stage.getViewport().update(width, height,true);
