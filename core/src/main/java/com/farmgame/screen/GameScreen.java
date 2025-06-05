@@ -5,6 +5,7 @@ import com.badlogic.gdx.graphics.*;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.GlyphLayout;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
+import com.badlogic.gdx.graphics.g2d.freetype.FreeTypeFontGenerator;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.scenes.scene2d.Actor;
@@ -59,7 +60,11 @@ public class GameScreen implements Screen {
         this.gameClock = new GameClock();
         this.player = new Player("FarmGame");
 
-        font.getData().setScale(1.5f);
+        FreeTypeFontGenerator generator = new FreeTypeFontGenerator(Gdx.files.internal("assets/arial.ttf"));
+        FreeTypeFontGenerator.FreeTypeFontParameter parameter = new FreeTypeFontGenerator.FreeTypeFontParameter();
+        parameter.size = 16;
+        BitmapFont font16 = generator.generateFont(parameter);
+        generator.dispose();
 
         skin = new Skin(Gdx.files.internal("assets/uiskin.json"));
         stage = new Stage(new ScreenViewport(), batch);
@@ -79,7 +84,7 @@ public class GameScreen implements Screen {
         rightSideMenu.pad(10);
 
         Table leftSideMenu = new Table();
-        leftSideMenu.top().pad(10);
+        leftSideMenu.top().pad(10).left();
 
         playerNameLabel = new Label("Imie: " + player.getName(), skin);
         playerLevelLabel = new Label("Poziom: " + player.getLevel(), skin);
@@ -105,6 +110,7 @@ public class GameScreen implements Screen {
         sidebar.add(new Label("Rośliny:", skin)).left().row();
         Table plantButtons = new Table();
 
+
         for (PlantType type : PlantDatabase.getAll()) {
             Pixmap pixmap = new Pixmap(16, 16, Pixmap.Format.RGBA8888);
             pixmap.setColor(type.getColor());
@@ -116,9 +122,11 @@ public class GameScreen implements Screen {
             TextButton button = new TextButton(type.getName(), skin);
             button.getLabel().setAlignment(Align.left);
 
+            Label.LabelStyle labelStyle = new Label.LabelStyle();
+            labelStyle.font = font16;
+
             Label infoLabel = new Label("Kup: " + type.getSeedPrice() + "$ | Sprzedaj: " + type.getSellPrice()
-                + "$" + "\nCzas wzrostu: " + type.getGrowthTime(), skin);
-            infoLabel.setFontScale(0.9f);
+                + "$" + "\nCzas wzrostu: " + type.getGrowthTime(), labelStyle);
 
             button.addListener(new ChangeListener() {
                 @Override
@@ -192,7 +200,7 @@ public class GameScreen implements Screen {
         mainTable.add(leftSideMenu).width(200).padLeft(10).fill().top();
         mainTable.add().expand().fill();
         mainTable.add(rightSideMenu).width(400).fill().top();
-      
+
         // Konfiguracja obsługi wejścia
         InputAdapter gameInput = new InputAdapter() {
             @Override
@@ -346,9 +354,22 @@ public class GameScreen implements Screen {
                 Plant plant = plot.getPlant();
 
                 if (plot.isBlocked() && hasUnlockedNeighbor(x, y)) {
+                    String plusSign = "+";
+                    GlyphLayout plusLayout = new GlyphLayout(font, plusSign);
+                    float plusX = x * TILE_SIZE + (TILE_SIZE - plusLayout.width) / 2;
+                    float plusY = y * TILE_SIZE + (TILE_SIZE + plusLayout.height) / 2;
+
                     font.setColor(Color.WHITE);
-                    font.draw(batch, "+", x * TILE_SIZE + TILE_SIZE/2 - 4, y * TILE_SIZE + TILE_SIZE/2 + 5);
-                    font.draw(batch, farm.getPlotPrice(x, y) + "$", x * TILE_SIZE + 5, y * TILE_SIZE + 15);
+                    font.draw(batch, plusSign, plusX, plusY);
+
+                    String priceText = farm.getPlotPrice(x, y) + "$";
+                    GlyphLayout priceLayout = new GlyphLayout(font, priceText);
+                    float priceX = x * TILE_SIZE + 2;
+                    float priceY = y * TILE_SIZE + priceLayout.height + 2;
+
+                    font.getData().setScale(1f);
+                    font.draw(batch, priceText, priceX, priceY);
+                    font.getData().setScale(1.5f);
                 }
 
                 if (plant != null && plot.getState() != Plot.State.EMPTY) {
@@ -510,7 +531,7 @@ public class GameScreen implements Screen {
         }
         return false;
     }
-  
+
     @Override public void resize(int width, int height) {
         gameViewport.update(width, height, true);
         stage.getViewport().update(width, height,true);
