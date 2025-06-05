@@ -12,11 +12,15 @@ import com.badlogic.gdx.scenes.scene2d.Actor;
 import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.scenes.scene2d.ui.*;
 import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener;
-import com.badlogic.gdx.utils.Align;
 import com.badlogic.gdx.utils.viewport.ScreenViewport;
 import com.badlogic.gdx.utils.viewport.Viewport;
 import com.farmgame.game.*;
+import com.farmgame.player.InventoryItem;
 import com.farmgame.player.Player;
+import com.farmgame.ui.InventorySellWindow;
+import com.farmgame.ui.PlantSelectionWindow;
+
+import java.util.ArrayList;
 
 public class GameScreen implements Screen {
     private final Farm farm;
@@ -37,18 +41,16 @@ public class GameScreen implements Screen {
         HARVEST
     }
     private Action currentAction = Action.PLANT;
-    private final Inventory inventory = new Inventory();
     private final Label moneyLabel;
-    private final Table inventoryTable;
     private final OrthographicCamera camera;
     private final Viewport gameViewport;
     private final GameClock gameClock;
     private final Label clockLabel;
-    private Player player;
-    private Label playerNameLabel;
-    private Label playerLevelLabel;
-    private Label playerExpLabel;
-    private Label expToNextLevelLabel;
+    private final Player player;
+    private final Label playerNameLabel;
+    private final Label playerLevelLabel;
+    private final Label playerExpLabel;
+    private final Label expToNextLevelLabel;
 
 
     public GameScreen() {
@@ -106,53 +108,14 @@ public class GameScreen implements Screen {
         Table sidebar = new Table();
         sidebar.defaults().pad(4).left();
 
-        // Sekcja roślin
-        sidebar.add(new Label("Rośliny:", skin)).left().row();
-        Table plantButtons = new Table();
-
-
-        for (PlantType type : PlantDatabase.getAll()) {
-            Pixmap pixmap = new Pixmap(16, 16, Pixmap.Format.RGBA8888);
-            pixmap.setColor(type.getColor());
-            pixmap.fill();
-            Texture texture = new Texture(pixmap);
-            pixmap.dispose();
-
-            Image colorBox = new Image(texture);
-            TextButton button = new TextButton(type.getName(), skin);
-            button.getLabel().setAlignment(Align.left);
-
-            Label.LabelStyle labelStyle = new Label.LabelStyle();
-            labelStyle.font = font16;
-
-            Label infoLabel = new Label("Kup: " + type.getSeedPrice() + "$ | Sprzedaj: " + type.getSellPrice()
-                + "$" + "\nCzas wzrostu: " + type.getGrowthTime(), labelStyle);
-
-            button.addListener(new ChangeListener() {
-                @Override
-                public void changed(ChangeEvent event, Actor actor) {
-                    selectedPlant = type;
-                    currentAction = Action.PLANT;
-                    if (selectedButton != null) selectedButton.setColor(Color.WHITE);
-                    selectedButton = button;
-                    button.setColor(Color.CYAN);
-                    waterButton.setColor(Color.WHITE);
-                    harvestButton.setColor(Color.WHITE);
-                }
-            });
-
-            Table row = new Table();
-            row.add(colorBox).size(16).padRight(5);
-            row.add(button).left().expandX().fillX().row();
-            row.add().padLeft(21);
-            row.add(infoLabel).left().colspan(2).row();
-
-            plantButtons.add(row).expandX().fillX().padBottom(6).row();
-        }
-        sidebar.add(plantButtons).expandX().fillX().row();
-
         // Sekcja akcji
         sidebar.add(new Label("Akcje:", skin)).left().padTop(10).row();
+        //Okno wyboru rośliny
+        TextButton openPlantChooserButton = getPlantChooserButton();
+        // Okno Magazynu
+        TextButton openSellWindowButton = getInventoryButton();
+        sidebar.add(openPlantChooserButton).expandX().fillX().padTop(10).row();
+        sidebar.add(openSellWindowButton).expandX().fillX().padTop(10).row();
 
         waterButton = new TextButton("Podlej", skin);
         harvestButton = new TextButton("Zbierz", skin);
@@ -184,12 +147,6 @@ public class GameScreen implements Screen {
             }
         });
 
-        // Sekcja magazynu
-        sidebar.add(new Label("Magazyn:", skin)).left().padTop(10).row();
-        this.inventoryTable = new Table();
-        updateInventoryTable(inventoryTable);
-        sidebar.add(inventoryTable).expandX().fillX().row();
-
         // Dodanie scrollowania do menu
         ScrollPane scrollPane = new ScrollPane(sidebar, skin);
         scrollPane.setFadeScrollBars(false);
@@ -220,6 +177,7 @@ public class GameScreen implements Screen {
                         player.addExp(2);
                         updatePlayerStatus();
                     }
+
                     return true;
                 }
 
@@ -245,9 +203,15 @@ public class GameScreen implements Screen {
                     }
                     case HARVEST -> {
                         if (plot.getState() == Plot.State.READY_TO_HARVEST && plot.getPlant() != null) {
-                            inventory.addItem(plot.getPlant().getType().getName(), 1);
+                            PlantType type = plot.getPlant().getType();
+                            InventoryItem newItem = new InventoryItem(
+                                type.getName(),
+                                1,
+                                type.getSellPrice()
+                            );
+
+                            player.getPlayerInventory().addItem(newItem);
                             plot.harvest();
-                            updateInventoryTable(inventoryTable);
                             player.addExp(1);
                             updatePlayerStatus();
                         }
@@ -260,6 +224,53 @@ public class GameScreen implements Screen {
         Gdx.input.setInputProcessor(new InputMultiplexer(stage, gameInput));
     }
 
+    private TextButton getPlantChooserButton() {
+        TextButton openPlantChooserButton = new TextButton("Wybierz roślinę", skin);
+        openPlantChooserButton.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+
+                PlantSelectionWindow plantSelectionWindow = new PlantSelectionWindow("Wybierz roślinę", skin, chosenPlant -> {
+                    selectedPlant = chosenPlant;
+                    System.out.println("Wybrano roślinę: " + chosenPlant.getName());
+
+                    currentAction = Action.PLANT;
+                    if (selectedButton != null) selectedButton.setColor(Color.WHITE);
+                    selectedButton = null;
+                });
+                stage.addActor(plantSelectionWindow);
+
+                plantSelectionWindow.setPosition(
+                    (stage.getWidth() - plantSelectionWindow.getWidth()) / 2f,
+                    (stage.getHeight() - plantSelectionWindow.getHeight()) / 2f
+                );
+            }
+        });
+        return openPlantChooserButton;
+    }
+
+    private TextButton getInventoryButton() {
+        TextButton openSellWindowButton = new TextButton("Magazyn", skin);
+        openSellWindowButton.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                InventorySellWindow sellWindow = new InventorySellWindow(
+                    "Magazyn",
+                    skin,
+                    player,
+                    ()-> updatePlayerStatus()
+                );
+                stage.addActor(sellWindow);
+
+                sellWindow.setPosition(
+                    (stage.getWidth() - sellWindow.getWidth()) / 2f,
+                    (stage.getHeight() - sellWindow.getHeight()) / 2f
+                );
+            }
+        });
+        return openSellWindowButton;
+    }
+
     private TextButton getSellAllButton() {
         TextButton sellAllButton = new TextButton("Sprzedaj wszystko", skin);
         sellAllButton.addListener(new ChangeListener() {
@@ -267,23 +278,20 @@ public class GameScreen implements Screen {
             public void changed(ChangeEvent event, Actor actor) {
                 int earned = 0;
                 int count = 0;
-                for (var entry : inventory.getItems().entrySet()) {
-                    String plantName = entry.getKey();
-                    int quantity = entry.getValue();
-                    if (quantity <= 0) continue;
+                var allItemsCopy = new ArrayList<>(player.getPlayerInventory().getItems());
 
-                    PlantType type = PlantDatabase.getByName(plantName);
-                    if (type != null) {
-                        earned += quantity * type.getSellPrice();
-                        count += quantity;
-                    }
+                for (InventoryItem item : allItemsCopy) {
+                    if (item.getQuantity() <= 0) continue;
+
+                    earned += item.getQuantity() * item.getSellPrice();
+                    count += item.getQuantity();
+
+                    player.getPlayerInventory().removeItem(item.getName(), item.getQuantity());
                 }
                 if (count > 0) {
                     player.addExp(count);
                 }
                 player.addMoney(earned);
-                inventory.clearItem();
-                updateInventoryTable(inventoryTable);
                 updatePlayerStatus();
             }
         });
@@ -478,41 +486,7 @@ public class GameScreen implements Screen {
         };
     }
 
-
-    private void updateInventoryTable(Table inventoryTable) {
-        inventoryTable.clear();
-
-        for (var entry : inventory.getItems().entrySet()) {
-            String name = entry.getKey();
-            int count = entry.getValue();
-
-            if (count <= 0) continue;
-
-            PlantType type = PlantDatabase.getByName(name);
-            if (type == null) continue;
-
-            Label itemLabel = new Label(name + " x" + count + " (" + type.getSellPrice() + "$)", skin);
-            TextButton sellButton = new TextButton("Sprzedaj", skin);
-
-            sellButton.addListener(new ChangeListener() {
-                @Override
-                public void changed(ChangeEvent event, Actor actor) {
-                    inventory.removeItem(name, 1);
-                    player.addMoney(type.getSellPrice());
-                    player.addExp(1);
-                    updateInventoryTable(inventoryTable);
-                    updatePlayerStatus();
-                }
-            });
-
-            Table row = new Table();
-            row.add(itemLabel).left().expandX();
-            row.add(sellButton).right();
-            inventoryTable.add(row).fillX().padBottom(2).row();
-        }
-    }
-
-    private void updatePlayerStatus(){
+    public void updatePlayerStatus(){
         playerLevelLabel.setText("Poziom: " + player.getLevel());
         playerExpLabel.setText("Exp: " + player.getExp());
         expToNextLevelLabel.setText("Exp do kolejnego poziomu: " + player.getExpToNextLevel());
