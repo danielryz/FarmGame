@@ -2,10 +2,10 @@ package com.farmgame.game;
 
 public class Plot {
     public enum State {
-        EMPTY, PLANTED, GROWTH, READY_TO_HARVEST
+        BLOCKED, EMPTY, PLANTED, GROWTH, READY_TO_HARVEST
     }
 
-    private State state = State.EMPTY;
+    private State state = State.BLOCKED;
     private Plant plant;
 
     public State getState() {
@@ -50,6 +50,16 @@ public class Plot {
                 plant.resetWatered();
             }
             plant = null;
+            state = State.EMPTY;
+        }
+    }
+
+    public boolean isBlocked() {
+        return state == State.BLOCKED;
+    }
+
+    public void unlock() {
+        if (isBlocked()) {
             state = State.EMPTY;
         }
     }
