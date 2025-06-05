@@ -15,6 +15,7 @@ import com.badlogic.gdx.utils.Align;
 import com.badlogic.gdx.utils.viewport.ScreenViewport;
 import com.badlogic.gdx.utils.viewport.Viewport;
 import com.farmgame.game.*;
+import com.farmgame.player.Player;
 
 public class GameScreen implements Screen {
     private final Farm farm;
@@ -36,13 +37,18 @@ public class GameScreen implements Screen {
     }
     private Action currentAction = Action.PLANT;
     private final Inventory inventory = new Inventory();
-    private int money = 100;
     private final Label moneyLabel;
     private final Table inventoryTable;
     private final OrthographicCamera camera;
     private final Viewport gameViewport;
     private final GameClock gameClock;
     private final Label clockLabel;
+    private Player player;
+    private Label playerNameLabel;
+    private Label playerLevelLabel;
+    private Label playerExpLabel;
+    private Label expToNextLevelLabel;
+
 
     public GameScreen() {
         this.farm = new Farm(10, 10);
@@ -51,6 +57,7 @@ public class GameScreen implements Screen {
         this.camera = new OrthographicCamera();
         this.gameViewport = new ScreenViewport(camera);
         this.gameClock = new GameClock();
+        this.player = new Player("FarmGame");
 
         font.getData().setScale(1.5f);
 
@@ -63,13 +70,26 @@ public class GameScreen implements Screen {
         stage.addActor(mainTable);
 
         // Inicjalizacja komponentów
-        this.moneyLabel = new Label("Pieniądze: " + money, skin);
+        this.moneyLabel = new Label("Pieniądze: " + player.getMoney(), skin);
         this.clockLabel = new Label("", skin);
 
         // Prawa strona z menu
         Table rightSideMenu = new Table();
         rightSideMenu.top();
         rightSideMenu.pad(10);
+
+        Table leftSideMenu = new Table();
+        leftSideMenu.top().pad(10);
+
+        playerNameLabel = new Label("Imie: " + player.getName(), skin);
+        playerLevelLabel = new Label("Poziom: " + player.getLevel(), skin);
+        playerExpLabel = new Label("Exp: " + player.getExp(), skin);
+        expToNextLevelLabel = new Label("Exp do kolejnego poziomu: " + player.getExpToNextLevel(), skin);
+
+        leftSideMenu.add(playerNameLabel).left().row();
+        leftSideMenu.add(playerLevelLabel).left().row();
+        leftSideMenu.add(playerExpLabel).left().row();
+        leftSideMenu.add(expToNextLevelLabel).left().row();
 
         // Górny pasek (czas i pieniądze)
         Table topBar = new Table();
@@ -170,6 +190,7 @@ public class GameScreen implements Screen {
         rightSideMenu.add(scrollPane).expand().fill().top();
 
         // Dodanie obszarów do głównej tabeli
+        mainTable.add(leftSideMenu).width(200).padLeft(10).fill().top();
         mainTable.add().expand().fill();
         mainTable.add(rightSideMenu).width(400).fill().top();
 
@@ -188,20 +209,29 @@ public class GameScreen implements Screen {
                     case PLANT -> {
                         if (selectedPlant != null && plot.getState() == Plot.State.EMPTY) {
                             int cost = selectedPlant.getSeedPrice();
-                            if (money >= cost) {
-                                money -= cost;
+                            if (player.getMoney() >= cost) {
+                                player.addMoney(-cost);
+                                player.addExp(1);
+                                updatePlayerStatus();
                                 plot.plant(new Plant(selectedPlant));
+
                             } else {
                                 System.out.println("Za mało pieniędzy!");
                             }
                         }
                     }
-                    case WATER -> plot.water();
+                    case WATER -> {
+                        plot.water();
+                        player.addExp(1);
+                        updatePlayerStatus();
+                    }
                     case HARVEST -> {
                         if (plot.getState() == Plot.State.READY_TO_HARVEST && plot.getPlant() != null) {
                             inventory.addItem(plot.getPlant().getType().getName(), 1);
                             plot.harvest();
                             updateInventoryTable(inventoryTable);
+                            player.addExp(1);
+                            updatePlayerStatus();
                         }
                     }
                 }
@@ -218,20 +248,25 @@ public class GameScreen implements Screen {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
                 int earned = 0;
-
+                int count = 0;
                 for (var entry : inventory.getItems().entrySet()) {
                     String plantName = entry.getKey();
-                    int count = entry.getValue();
+                    int quantity = entry.getValue();
+                    if (quantity <= 0) continue;
 
                     PlantType type = PlantDatabase.getByName(plantName);
                     if (type != null) {
-                        earned += count * type.getSellPrice();
+                        earned += quantity * type.getSellPrice();
+                        count += quantity;
                     }
                 }
-
-                money += earned;
+                if (count > 0) {
+                    player.addExp(count);
+                }
+                player.addMoney(earned);
                 inventory.clearItem();
                 updateInventoryTable(inventoryTable);
+                updatePlayerStatus();
             }
         });
         return sellAllButton;
@@ -319,7 +354,7 @@ public class GameScreen implements Screen {
         }
         batch.end();
 
-        moneyLabel.setText("Pieniądze: " + money);
+        moneyLabel.setText("Pieniądze: " + player.getMoney());
 
         stage.act(delta);
         stage.draw();
@@ -422,8 +457,10 @@ public class GameScreen implements Screen {
                 @Override
                 public void changed(ChangeEvent event, Actor actor) {
                     inventory.removeItem(name, 1);
-                    money += type.getSellPrice();
+                    player.addMoney(type.getSellPrice());
+                    player.addExp(1);
                     updateInventoryTable(inventoryTable);
+                    updatePlayerStatus();
                 }
             });
 
@@ -432,6 +469,12 @@ public class GameScreen implements Screen {
             row.add(sellButton).right();
             inventoryTable.add(row).fillX().padBottom(2).row();
         }
+    }
+
+    private void updatePlayerStatus(){
+        playerLevelLabel.setText("Poziom: " + player.getLevel());
+        playerExpLabel.setText("Exp: " + player.getExp());
+        expToNextLevelLabel.setText("Exp do kolejnego poziomu: " + player.getExpToNextLevel());
     }
 
     @Override public void resize(int width, int height) {
