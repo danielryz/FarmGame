@@ -1,18 +1,21 @@
 package com.farmgame.player;
 
+
 public class Player {
     private final String name;
     private int money;
     private int level;
     private int exp;
     private int expToNextLevel;
+    private final Inventory inventory;
 
     public Player(String name) {
         this.name = name;
-        this.money = 20;
+        this.money = 1000;
         this.level = 1;
         this.exp = 0;
         this.expToNextLevel = 10;
+        this.inventory = new Inventory();
     }
 
     public void addExp(int amount) {
@@ -51,5 +54,9 @@ public class Player {
 
     public int getExpToNextLevel() {
         return expToNextLevel;
+    }
+
+    public Inventory getPlayerInventory() {
+        return inventory;
     }
 }
