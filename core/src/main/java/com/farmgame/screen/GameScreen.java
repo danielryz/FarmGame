@@ -188,12 +188,11 @@ public class GameScreen implements Screen {
         scrollPane.setScrollingDisabled(true, false);
 
         rightSideMenu.add(scrollPane).expand().fill().top();
-
         // Dodanie obszarów do głównej tabeli
         mainTable.add(leftSideMenu).width(200).padLeft(10).fill().top();
         mainTable.add().expand().fill();
         mainTable.add(rightSideMenu).width(400).fill().top();
-
+      
         // Konfiguracja obsługi wejścia
         InputAdapter gameInput = new InputAdapter() {
             @Override
@@ -204,6 +203,17 @@ public class GameScreen implements Screen {
 
                 Plot plot = farm.getPlot(x, y);
                 if (plot == null) return false;
+
+                if (plot.isBlocked() && hasUnlockedNeighbor(x, y)) {
+                    int price = farm.getPlotPrice(x, y);
+                    if (player.getMoney() >= price) {
+                        plot.unlock();
+                        player.addMoney(-price);
+                        player.addExp(2);
+                        updatePlayerStatus();
+                    }
+                    return true;
+                }
 
                 switch (currentAction) {
                     case PLANT -> {
@@ -294,13 +304,17 @@ public class GameScreen implements Screen {
                 Plot plot = farm.getPlot(x, y);
 
                 Color baseColor = switch (plot.getState()) {
+                    case BLOCKED -> Color.GRAY;
                     case EMPTY -> Color.BROWN;
                     case PLANTED -> Color.SKY;
                     case GROWTH -> Color.FOREST;
                     case READY_TO_HARVEST -> Color.GOLD;
                 };
                 shapeRenderer.setColor(baseColor);
-                shapeRenderer.rect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE - 2, TILE_SIZE - 2);
+
+                if(!plot.isBlocked() || hasUnlockedNeighbor(x, y)) {
+                    shapeRenderer.rect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE - 2, TILE_SIZE - 2);
+                }
 
                 Plant plant = plot.getPlant();
                 if (plant != null) {
@@ -330,6 +344,12 @@ public class GameScreen implements Screen {
             for (int y = 0; y < farm.getHeight(); y++) {
                 Plot plot = farm.getPlot(x, y);
                 Plant plant = plot.getPlant();
+
+                if (plot.isBlocked() && hasUnlockedNeighbor(x, y)) {
+                    font.setColor(Color.WHITE);
+                    font.draw(batch, "+", x * TILE_SIZE + TILE_SIZE/2 - 4, y * TILE_SIZE + TILE_SIZE/2 + 5);
+                    font.draw(batch, farm.getPlotPrice(x, y) + "$", x * TILE_SIZE + 5, y * TILE_SIZE + 15);
+                }
 
                 if (plant != null && plot.getState() != Plot.State.EMPTY) {
                     float timeLeft = plant.getTimeRemaining();
@@ -366,12 +386,12 @@ public class GameScreen implements Screen {
     }
 
     private float getGrowthMultiplier(){
-       return switch (gameClock.getTimeOfDay()){
-           case MORNING -> 1.2f;
-           case NOON -> 1.5f;
-           case EVENING -> 1.0f;
-           case NIGHT -> 0.0f;
-       };
+        return switch (gameClock.getTimeOfDay()){
+            case MORNING -> 1.2f;
+            case NOON -> 1.5f;
+            case EVENING -> 1.0f;
+            case NIGHT -> 0.0f;
+        };
     }
 
 
@@ -477,6 +497,20 @@ public class GameScreen implements Screen {
         expToNextLevelLabel.setText("Exp do kolejnego poziomu: " + player.getExpToNextLevel());
     }
 
+    private boolean hasUnlockedNeighbor(int x, int y) {
+        int[][] directions = {{0,1}, {1,0}, {0,-1}, {-1,0}};
+        for (int[] dir : directions) {
+            int nx = x + dir[0];
+            int ny = y + dir[1];
+            if (nx >= 0 && nx < farm.getWidth() && ny >= 0 && ny < farm.getHeight()) {
+                if (!farm.getPlot(nx, ny).isBlocked()) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+  
     @Override public void resize(int width, int height) {
         gameViewport.update(width, height, true);
         stage.getViewport().update(width, height,true);
