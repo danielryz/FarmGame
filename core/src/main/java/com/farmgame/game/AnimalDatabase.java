@@ -1,25 +1,27 @@
 package com.farmgame.game;
 
+import com.badlogic.gdx.graphics.Color;
 import java.util.*;
+import java.util.List;
 
 public class AnimalDatabase {
-    private static final Map<String, AnimalType> ANIMAL_TYPE_MAP = new HashMap<>();
+    private static final List<AnimalType> animalTypes = new ArrayList<>();
 
     static {
-        AnimalType cow = new AnimalType("Krowa", 200, Set.of("Trawa", "Pszenica", "Sałata", "Kapusta"), "Mleko", 40f, 40);
-        AnimalType chicken = new AnimalType("Kura", 100, Set.of("Pszenica", "Kukurydza"), "Jajko", 20f, 30);
-        AnimalType sheep = new AnimalType("Owca", 300, Set.of("Trawa"), "Wełna", 50f, 50);
+        animalTypes.add(new AnimalType("Krowa", 200, Set.of("Trawa", "Pszenica", "Sałata", "Kapusta"), "Mleko", 40f, 40, Color.BLACK));
+        animalTypes.add(new AnimalType("Kura", 100, Set.of("Pszenica", "Kukurydza"), "Jajko", 20f, 30, Color.YELLOW));
+        animalTypes.add(new AnimalType("Owca", 300, Set.of("Trawa"), "Wełna", 50f, 50, Color.WHITE));
 
-        ANIMAL_TYPE_MAP.put(cow.getName(), cow);
-        ANIMAL_TYPE_MAP.put(chicken.getName(), chicken);
-        ANIMAL_TYPE_MAP.put(sheep.getName(), sheep);
     }
 
     public static List<AnimalType> getAll() {
-        return new ArrayList<>(ANIMAL_TYPE_MAP.values());
+        return animalTypes;
     }
 
     public static AnimalType getByName(String name) {
-        return ANIMAL_TYPE_MAP.getOrDefault(name, null);
+        return animalTypes.stream()
+            .filter(a -> a.getName().equalsIgnoreCase(name))
+            .findFirst()
+            .orElse(null);
     }
 }

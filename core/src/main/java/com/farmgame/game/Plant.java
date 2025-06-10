@@ -27,7 +27,6 @@ public class Plant {
                 currentGrowthTime = type.getGrowthTime();
             }
         }
-        System.out.println("Growth time: " + currentGrowthTime + "/" + type.getGrowthTime());
     }
 
     public void resetWatered() {
