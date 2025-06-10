@@ -51,7 +51,9 @@ public class GameScreen implements Screen {
     private final OrthographicCamera camera;
     private final Viewport gameViewport;
     private final GameClock gameClock;
+    private final Weather weather;
     private final Label clockLabel;
+    private final Label weatherLabel;
     private final Player player;
     private final Label playerNameLabel;
     private final Label playerLevelLabel;
@@ -60,6 +62,10 @@ public class GameScreen implements Screen {
 
     private final int penOffsetX;
 
+    private int lastProcessedX = -1;
+    private int lastProcessedY = -1;
+    private boolean isDragging = false;
+
     public GameScreen() {
         this.farm = new Farm(10, 10, 5, 5);
         this.shapeRenderer = new ShapeRenderer();
@@ -67,6 +73,7 @@ public class GameScreen implements Screen {
         this.camera = new OrthographicCamera();
         this.gameViewport = new ScreenViewport(camera);
         this.gameClock = new GameClock();
+        this.weather = new Weather();
         this.player = new Player("FarmGame");
 
         this.penOffsetX = farm.getWidth() * TILE_SIZE + 64;
@@ -88,6 +95,7 @@ public class GameScreen implements Screen {
         // Inicjalizacja komponentów
         this.moneyLabel = new Label("Pieniądze: " + player.getMoney(), skin);
         this.clockLabel = new Label("", skin);
+        this.weatherLabel = new Label("", skin);
 
         // Prawa strona z menu
         Table rightSideMenu = new Table();
@@ -107,9 +115,12 @@ public class GameScreen implements Screen {
         leftSideMenu.add(playerExpLabel).left().row();
         leftSideMenu.add(expToNextLevelLabel).left().row();
 
-        // Górny pasek (czas i pieniądze)
+        // Górny pasek (czas, pogoda i pieniądze)
         Table topBar = new Table();
-        topBar.add(clockLabel).left().expandX();
+        Table timeWeatherTable = new Table();
+        timeWeatherTable.add(clockLabel).left().row();
+        timeWeatherTable.add(weatherLabel).left();
+        topBar.add(timeWeatherTable).left().expandX();
         topBar.add(moneyLabel).right();
         rightSideMenu.add(topBar).fillX().expandX().padBottom(10).row();
 
@@ -187,14 +198,20 @@ public class GameScreen implements Screen {
         InputAdapter gameInput = new InputAdapter() {
             @Override
             public boolean touchDown(int screenX, int screenY, int pointer, int button) {
+                lastProcessedX = -1;
+                lastProcessedY = -1;
+                isDragging = true;
+
                 Vector3 worldCoords = camera.unproject(new Vector3(screenX, screenY, 0));
 
                 if (worldCoords.x < penOffsetX) {
                     int gridX = (int) (worldCoords.x / TILE_SIZE);
                     int gridY = (int) (worldCoords.y / TILE_SIZE);
                     handlePlotClick(gridX, gridY);
-                } else {
 
+                    lastProcessedX = gridX;
+                    lastProcessedY = gridY;
+                } else {
                     float penWorldX = worldCoords.x - penOffsetX;
                     float penWorldY = worldCoords.y;
                     int penX = (int) (penWorldX / PEN_SIZE);
@@ -204,6 +221,33 @@ public class GameScreen implements Screen {
                         handlePenClick(penX, penY);
                     }
                 }
+                return true;
+            }
+
+            @Override
+            public boolean touchDragged(int screenX, int screenY, int pointer) {
+                if (!isDragging || (currentAction != Action.PLANT && currentAction != Action.HARVEST)) {
+                    return false;
+                }
+
+                Vector3 worldCoords = camera.unproject(new Vector3(screenX, screenY, 0));
+                if (worldCoords.x < penOffsetX) {
+                    int gridX = (int) (worldCoords.x / TILE_SIZE);
+                    int gridY = (int) (worldCoords.y / TILE_SIZE);
+
+                    if (gridX != lastProcessedX || gridY != lastProcessedY) {
+                        handlePlotClick(gridX, gridY);
+
+                        lastProcessedX = gridX;
+                        lastProcessedY = gridY;
+                    }
+                }
+                return true;
+            }
+
+            @Override
+            public boolean touchUp(int screenX, int screenY, int pointer, int button) {
+                isDragging = false;
                 return true;
             }
         };
@@ -301,7 +345,6 @@ public class GameScreen implements Screen {
             switch (currentAction) {
                 case FEED -> {
                     if (productState == Animal.ProductState.NOT_FED) {
-                        // Check if there are any suitable plants in inventory
                         boolean hasAnyPlant = false;
                         for (String fedName : animal.getType().getFeedSet()) {
                             if (player.getPlayerInventory().getQuantity(fedName) > 0) {
@@ -311,17 +354,14 @@ public class GameScreen implements Screen {
                         }
 
                         if (hasAnyPlant) {
-                            // Open window to choose plant for feeding
                             ChoosePlantToFedWindow choosePlantWindow = new ChoosePlantToFedWindow(
                                 "Wybierz roślinę do karmienia",
                                 skin,
                                 player,
                                 animal.getType(),
                                 chosenPlant -> {
-                                    // Remove the plant from inventory
                                     player.getPlayerInventory().removeItem(chosenPlant.getName(), 1);
 
-                                    // Feed the animal
                                     boolean fed = animal.fed(chosenPlant.getName());
                                     if (fed) {
                                         System.out.println("Zwierzę nakarmione rośliną: " + chosenPlant.getName());
@@ -474,7 +514,9 @@ public class GameScreen implements Screen {
     public void render(float delta) {
         farmUpdate(delta);
         gameClock.update(delta);
+        weather.update(delta);
         updateClockLabel();
+        updateWeatherLabel();
 
         Color ambientColor = getAmbientColor();
         Gdx.gl.glClearColor(0.3f * ambientColor.r, 0.5f * ambientColor.g, 0.3f * ambientColor.b, 1);
@@ -661,7 +703,7 @@ public class GameScreen implements Screen {
                     Animal animal = pen.getCurrentAnimal();
                     float timeLeft = animal.getTimeToNextProduct();
 
-                    // Nazwa zwierzęcia (jak w przykładowym kodzie):
+                    // Nazwa zwierzęcia
                     String animalName = animal.getType().getName();
                     GlyphLayout layout = new GlyphLayout(font, animalName);
 
@@ -752,12 +794,20 @@ public class GameScreen implements Screen {
     }
 
     private float getGrowthMultiplier(){
-        return switch (gameClock.getTimeOfDay()){
+        float timeMultiplier = switch (gameClock.getTimeOfDay()){
             case MORNING -> 1.2f;
             case NOON -> 1.5f;
             case EVENING -> 1.0f;
             case NIGHT -> 0.0f;
         };
+
+        float weatherMultiplier = weather.getGrowthMultiplier();
+
+        if (gameClock.getTimeOfDay() == GameClock.TimeOfDay.NIGHT) {
+            return 0.0f;
+        }
+
+        return timeMultiplier * weatherMultiplier;
     }
 
     private void updateClockLabel(){
@@ -772,6 +822,20 @@ public class GameScreen implements Screen {
             timeText.append(" (Rośliny nie rosną)");
         }
         clockLabel.setText(timeText);
+    }
+
+    private void updateWeatherLabel() {
+        StringBuilder weatherText = new StringBuilder();
+        weatherText.append(String.format("Pogoda: %s", weather.getDisplayName()));
+
+        float multiplier = weather.getGrowthMultiplier();
+        if (multiplier > 1.0f) {
+            weatherText.append(" (Szybszy wzrost)");
+        } else if (multiplier < 1.0f) {
+            weatherText.append(" (Wolniejszy wzrost)");
+        }
+
+        weatherLabel.setText(weatherText);
     }
 
     private String getPolishWeekDay(GameClock.WeekDay weekDay) {
@@ -798,20 +862,15 @@ public class GameScreen implements Screen {
     }
 
     private Color getAmbientColor() {
-        return switch (gameClock.getTimeOfDay()) {
+        Color timeColor = switch (gameClock.getTimeOfDay()) {
             case MORNING -> new Color(1f, 0.9f, 0.8f, 1f);
             case NOON -> new Color(1f, 1f, 1f, 1f);
             case EVENING -> new Color(0.8f, 0.7f, 0.6f, 1f);
             case NIGHT -> new Color(0.4f, 0.4f, 0.5f, 1f);
         };
-    }
 
-    private Color convertAwtToGdx(java.awt.Color awtColor) {
-        float r = awtColor.getRed() / 255f;
-        float g = awtColor.getGreen() / 255f;
-        float b = awtColor.getBlue() / 255f;
-        float a = awtColor.getAlpha() / 255f;
-        return new Color(r, g, b, a);
+        Color weatherColor = weather.getAmbientColor();
+        return timeColor.mul(weatherColor);
     }
 
     public void updatePlayerStatus(){

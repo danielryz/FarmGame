@@ -34,10 +34,8 @@ public class ChoosePlantToFedWindow extends Window {
         Inventory inventory = player.getPlayerInventory();
         List<PlantType> availablePlants = new ArrayList<>();
 
-        // Filter plants that are both in inventory and accepted by the animal type
         for (InventoryItem item : inventory.getItems()) {
             String plantName = item.getName();
-            // Check if this plant is in the animal's feed set
             if (animalType.getFeedSet().contains(plantName)) {
                 PlantType plantType = PlantDatabase.getByName(plantName);
                 if (plantType != null) {
