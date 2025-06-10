@@ -37,6 +37,10 @@ public class PlantType {
         return sellPrice;
     }
 
+    public static PlantType getByName(String name) {
+        return PlantDatabase.getByName(name);
+    }
+
     @Override
     public String toString() {
         return name;

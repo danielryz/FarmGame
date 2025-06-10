@@ -24,6 +24,9 @@ public class AnimalType {
     public String getName() {
         return name;
     }
+    public static AnimalType getByName(String name) {
+        return AnimalDatabase.getByName(name);
+    }
     public int getCost() {
         return cost;
     }

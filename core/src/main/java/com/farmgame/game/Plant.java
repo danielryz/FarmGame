@@ -53,6 +53,14 @@ public class Plant {
         return Math.max(0, type.getGrowthTime() - currentGrowthTime);
     }
 
+    public void setTimeRemaining(float timeRemaining) {
+        currentGrowthTime = timeRemaining;
+    }
+
+    public void setWatered(boolean isWatered) {
+        this.watered = isWatered;
+    }
+
     public enum GrowthStage {
         PLANTED,
         GROWING,

@@ -44,4 +44,7 @@ public class Inventory {
     }
 
 
+    public void clearInventory() {
+        items.clear();
+    }
 }

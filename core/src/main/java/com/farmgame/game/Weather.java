@@ -1,9 +1,27 @@
 package com.farmgame.game;
 
 import com.badlogic.gdx.graphics.Color;
+import com.farmgame.game_save.SavedAnimal;
+
 import java.util.Random;
 
 public class Weather {
+
+    public void setCurrentWeather(String currentWeather) {
+        for (Condition condition : Condition.values()) {
+            if (condition.getDisplayName().equalsIgnoreCase(currentWeather)) {
+                this.currentCondition = condition;
+                return;
+            }
+        }
+        System.out.println("Nie znaleziono warunku: " + currentWeather);
+        this.currentCondition = Condition.SUNNY;
+        System.out.println("Ustawiono warunek: " + this.currentCondition.getDisplayName());
+    }
+
+    public void setTimeUntilChange(float timeUntilChange) {
+        this.timeUntilChange = timeUntilChange;
+    }
 
     public enum Condition {
         SUNNY(1.0f, new Color(1f, 1f, 1f, 1f), "Słonecznie"),
@@ -77,5 +95,23 @@ public class Weather {
 
     public float getTimeUntilChange() {
         return timeUntilChange;
+    }
+
+    public String getCurrentWeatherName(){
+        return currentCondition.getDisplayName();
+    }
+
+    public static class SavedAnimalPen {
+        public boolean isBlocked;
+        public String state; // BLOCKED, EMPTY, OCCUPIED
+        public SavedAnimal currentAnimal;
+
+        public SavedAnimalPen() {}
+
+        public SavedAnimalPen(boolean isBlocked, String state, SavedAnimal currentAnimal) {
+            this.isBlocked = isBlocked;
+            this.state = state;
+            this.currentAnimal = currentAnimal;
+        }
     }
 }

@@ -2,7 +2,7 @@ package com.farmgame.player;
 
 
 public class Player {
-    private final String name;
+    private String name;
     private int money;
     private int level;
     private int exp;
@@ -36,6 +36,7 @@ public class Player {
         return name;
     }
 
+
     public int getMoney() {
         return money;
     }
@@ -59,4 +60,21 @@ public class Player {
     public Inventory getPlayerInventory() {
         return inventory;
     }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public void setMoney(int money) {
+        this.money = money;
+    }
+
+    public void setLevel(int level) {
+        this.level = level;
+    }
+
+    public void setExp(int exp) {
+        this.exp = exp;
+    }
+
 }

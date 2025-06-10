@@ -35,6 +35,12 @@ public class AnimalPen {
         }
     }
 
+    public void block() {
+        if (state != State.BLOCKED) {
+            state = State.BLOCKED;
+        }
+    }
+
 
     public boolean placeAnimal(Animal animal, Player player){
         if(state == State.EMPTY){
@@ -62,7 +68,15 @@ public class AnimalPen {
         }
    }
 
-   public boolean isBlocked(){
+    public void setCurrentAnimal(Animal animal) {
+        this.currentAnimal = animal;
+    }
+
+    public void setState(State state) {
+        this.state = state;
+    }
+
+    public boolean isBlocked(){
         return state == State.BLOCKED;
    }
 
