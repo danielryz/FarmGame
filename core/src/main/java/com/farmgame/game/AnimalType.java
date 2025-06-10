@@ -1,5 +1,6 @@
 package com.farmgame.game;
 
+import com.badlogic.gdx.graphics.Color;
 import java.util.Set;
 
 public class AnimalType {
@@ -9,14 +10,16 @@ public class AnimalType {
     private final String productName;
     private final float productTime;
     private final int sellPrice;
+    private final Color color;
 
-    public AnimalType(String name, int cost, Set<String> feedSet, String productName, float productTime, int sellPrice) {
+    public AnimalType(String name, int cost, Set<String> feedSet, String productName, float productTime, int sellPrice, Color color ) {
         this.name = name;
         this.cost = cost;
         this.feedSet = feedSet;
         this.productName = productName;
         this.productTime = productTime;
         this.sellPrice = sellPrice;
+        this.color = color;
     }
     public String getName() {
         return name;
@@ -35,5 +38,8 @@ public class AnimalType {
     }
     public int getSellPrice() {
         return sellPrice;
+    }
+    public Color getColor() {
+        return color;
     }
 }

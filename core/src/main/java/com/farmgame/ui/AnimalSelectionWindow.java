@@ -1,6 +1,8 @@
 package com.farmgame.ui;
 
 
+import com.badlogic.gdx.graphics.Pixmap;
+import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.scenes.scene2d.Actor;
 import com.badlogic.gdx.scenes.scene2d.ui.*;
 import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener;
@@ -12,8 +14,11 @@ import com.farmgame.player.Player;
 
 public class AnimalSelectionWindow extends Window {
 
-    public AnimalSelectionWindow(String tile, Skin skin, Player player, AnimalPen animalPen){
+    private final Runnable onBuyCallback;
+
+    public AnimalSelectionWindow(String tile, Skin skin, Player player, AnimalPen animalPen, Runnable onBuyCallback){
         super(tile, skin);
+        this.onBuyCallback = onBuyCallback;
 
         this.setModal(true);
         this.setMovable(true);
@@ -24,6 +29,13 @@ public class AnimalSelectionWindow extends Window {
         contentTable.defaults().pad(5);
 
         for (AnimalType type : AnimalDatabase.getAll()) {
+            Pixmap pixmap = new Pixmap(16, 16, Pixmap.Format.RGBA8888);
+            pixmap.setColor(type.getColor());
+            pixmap.fill();
+            Texture texture = new Texture(pixmap);
+            pixmap.dispose();
+
+            Image colorBox = new Image(texture);
 
             String infoText = String.format("%s\nKoszt: %d\nCzas produkcji %s: %.1fs\nZysk ze sprzedaży %s: %d",
                 type.getName(), type.getCost(), type.getProductName(),type.getProductTime(), type.getProductName(), type.getSellPrice());
@@ -40,6 +52,10 @@ public class AnimalSelectionWindow extends Window {
                             Animal newAnimal = new Animal(type);
                             animalPen.placeAnimal(newAnimal, player);
 
+                            if (onBuyCallback != null) {
+                                onBuyCallback.run();
+                            }
+
                             remove();
                         } else {
                             System.out.println("Za mało pieniędzy na kupno: " + type.getName());
@@ -50,6 +66,7 @@ public class AnimalSelectionWindow extends Window {
                 }
             });
 
+            contentTable.add(colorBox).size(16).padRight(5);
             contentTable.add(animalInfoLabel).growX().left();
             contentTable.add(buyButton).right().row();
             contentTable.row();

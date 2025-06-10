@@ -27,8 +27,8 @@ public class Inventory {
             if (item.getName().equalsIgnoreCase(itemName)){
                 item.decrementQuantity(quantityToRemove);
                 if (item.getQuantity() <= 0) items.remove(i);
+                break;
             }
-            break;
         }
     }
 

@@ -5,7 +5,7 @@ import com.farmgame.player.Player;
 public class AnimalPen {
 
     public enum State {
-        EMPTY, OCCUPIED
+        BLOCKED, EMPTY, OCCUPIED
     }
 
     private final int x;
@@ -17,7 +17,7 @@ public class AnimalPen {
     public AnimalPen(int x, int y) {
         this.x = x;
         this.y = y;
-        this.state = State.EMPTY;
+        this.state = State.BLOCKED;
         this.currentAnimal = null;
     }
 
@@ -29,27 +29,41 @@ public class AnimalPen {
         return currentAnimal;
     }
 
-   public boolean placeAnimal(Animal animal, Player player){
+    public void unlock() {
+        if (state == State.BLOCKED) {
+            state = State.EMPTY;
+        }
+    }
+
+
+    public boolean placeAnimal(Animal animal, Player player){
         if(state == State.EMPTY){
             this.currentAnimal = animal;
             this.state = State.OCCUPIED;
             player.addMoney(-animal.getType().getCost());
             player.addExp(5);
             return true;
+        } else {
+            System.out.println("Zagroda jest zajęta!");
+            return false;
         }
-        System.out.println("Zagroda jest zajęta!");
-        return false;
    }
 
    public void removeAnimal(){
-       this.currentAnimal = null;
-       this.state = State.EMPTY;
+        if (state == State.OCCUPIED) {
+            this.currentAnimal = null;
+            this.state = State.EMPTY;
+        }
    }
 
    public void update(float delta){
         if(currentAnimal != null){
             currentAnimal.update(delta);
         }
+   }
+
+   public boolean isBlocked(){
+        return state == State.BLOCKED;
    }
 
    public int getX() {

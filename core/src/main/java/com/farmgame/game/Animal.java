@@ -1,31 +1,50 @@
 package com.farmgame.game;
 
 public class Animal {
+    public enum ProductState {
+        NOT_FED, PRODUCTION, READY
+    }
+
     private final AnimalType type;
-    private boolean isFed;
+    private ProductState productState;
     private float timeToNextProduct;
 
 
     public Animal(AnimalType type) {
         this.type = type;
-        this.isFed = false;
         this.timeToNextProduct = 0f;
+        this.productState = ProductState.NOT_FED;
     }
 
     public void update(float delta){
-        if(isFed){
+        if(productState == ProductState.PRODUCTION){
             timeToNextProduct -= delta;
             if(timeToNextProduct <= 0f){
-                isFed = false;
                 timeToNextProduct = 0f;
+                productState = ProductState.READY;
             }
         }
     }
 
-    public boolean feed(String plantName){
-        if(type.getFeedSet().contains(plantName)){
-            isFed = true;
+    public boolean fed(String plantName){
+        if(productState != ProductState.NOT_FED){
+            System.out.println("Nie można nakarmić.");
+            return false;
+        }
+
+        if (type.getFeedSet().contains(plantName)) {
+            productState = ProductState.PRODUCTION;
             timeToNextProduct = type.getProductTime();
+            System.out.println("Nakarmiono zwierzę rośliną: " + plantName);
+            return true;
+        }
+        return false;
+    }
+
+    public boolean collectProduct(){
+        if(productState == ProductState.READY){
+            productState = ProductState.NOT_FED;
+            System.out.println("Zebrano produkt.");
             return true;
         }
         return false;
@@ -35,8 +54,8 @@ public class Animal {
         return type;
     }
 
-    public boolean isFed() {
-        return isFed;
+    public ProductState getProductState() {
+        return productState;
     }
 
     public float getTimeToNextProduct() {

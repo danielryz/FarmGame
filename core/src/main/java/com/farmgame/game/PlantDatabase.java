@@ -8,6 +8,7 @@ public class PlantDatabase {
     private static final List<PlantType> plantTypes = new ArrayList<>();
 
     static {
+        plantTypes.add(new PlantType("Trawa", 15f, new Color(0f, 0.2f, 0f, 1f), 10, 12));
         plantTypes.add(new PlantType("Marchew", 20f, Color.ORANGE, 15, 20));
         plantTypes.add(new PlantType("Ziemniak", 30f, Color.BROWN, 10, 16));
         plantTypes.add(new PlantType("Pszenica", 40f, Color.TAN, 5, 14));

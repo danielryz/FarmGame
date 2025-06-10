@@ -10,11 +10,13 @@ import com.farmgame.player.Player;
 public class InventorySellWindow extends Window {
 
     private final Runnable onSellCallback;
+    private final Player player;
 
     private final Table contentTable;
     public InventorySellWindow(String tile, Skin skin, Player player, Runnable onSellCallback) {
         super(tile, skin);
 
+        this.player = player;
         this.onSellCallback = onSellCallback;
 
         this.setModal(true);
@@ -89,5 +91,9 @@ public class InventorySellWindow extends Window {
             }
         });
         return sellButton;
+    }
+
+    public void refreshInventory() {
+        rebuildItemList(player);
     }
 }
