@@ -12,11 +12,14 @@ import com.badlogic.gdx.scenes.scene2d.Actor;
 import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.scenes.scene2d.ui.*;
 import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener;
+import com.badlogic.gdx.utils.Align;
 import com.badlogic.gdx.utils.viewport.ScreenViewport;
 import com.badlogic.gdx.utils.viewport.Viewport;
 import com.farmgame.game.*;
+import com.farmgame.game_save.GameState;
 import com.farmgame.player.InventoryItem;
 import com.farmgame.player.Player;
+import com.farmgame.game_save.SaveManager;
 import com.farmgame.ui.AnimalSelectionWindow;
 import com.farmgame.ui.ChoosePlantToFedWindow;
 import com.farmgame.ui.InventorySellWindow;
@@ -28,9 +31,13 @@ public class GameScreen implements Screen {
     private final Farm farm;
     private final int TILE_SIZE = 64;
     private final int PEN_SIZE = 128;
+    private final int X_OFFSET = 64;
+    private final int Y_OFFSET = 128;
     private final ShapeRenderer shapeRenderer;
     private final SpriteBatch batch;
     private final BitmapFont font = new BitmapFont();
+
+    private SaveManager saveManager;
 
     private final Stage stage;
     private final Skin skin;
@@ -60,6 +67,10 @@ public class GameScreen implements Screen {
     private final Label playerExpLabel;
     private final Label expToNextLevelLabel;
 
+    private Label messageLabel;
+    private float messageTimer = 0;
+    private final float MESSAGE_DISPLAY_TIME = 3f;
+
     private final int penOffsetX;
 
     private int lastProcessedX = -1;
@@ -75,8 +86,9 @@ public class GameScreen implements Screen {
         this.gameClock = new GameClock();
         this.weather = new Weather();
         this.player = new Player("FarmGame");
+        saveManager = new SaveManager();
 
-        this.penOffsetX = farm.getWidth() * TILE_SIZE + 64;
+        this.penOffsetX = farm.getWidth() * TILE_SIZE + 64 + X_OFFSET;
 
         FreeTypeFontGenerator generator = new FreeTypeFontGenerator(Gdx.files.internal("assets/arial.ttf"));
         FreeTypeFontGenerator.FreeTypeFontParameter parameter = new FreeTypeFontGenerator.FreeTypeFontParameter();
@@ -91,6 +103,23 @@ public class GameScreen implements Screen {
         Table mainTable = new Table();
         mainTable.setFillParent(true);
         stage.addActor(mainTable);
+
+        TextButton saveButton = new TextButton("Zapisz", skin);
+        TextButton loadButton = new TextButton("Wczytaj", skin);
+
+        saveButton.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                saveGame();
+            }
+        });
+
+        loadButton.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                loadGame();
+            }
+        });
 
         // Inicjalizacja komponentów
         this.moneyLabel = new Label("Pieniądze: " + player.getMoney(), skin);
@@ -146,6 +175,8 @@ public class GameScreen implements Screen {
         sidebar.add(feedButton).expandX().fillX().row();
         sidebar.add(waterButton).expandX().fillX().row();
         sidebar.add(harvestButton).expandX().fillX().row();
+        sidebar.add(saveButton).expandX().fillX().padTop(10).row();
+        sidebar.add(loadButton).expandX().fillX().padTop(10).row();
 
         feedButton.addListener(new ChangeListener() {
             @Override
@@ -189,10 +220,23 @@ public class GameScreen implements Screen {
         scrollPane.setScrollingDisabled(true, false);
 
         rightSideMenu.add(scrollPane).expand().fill().top();
+        //Labelka message
+        messageLabel = new Label("", skin);
+        messageLabel.setAlignment(Align.center);
+        messageLabel.setFontScale(1.2f);
+        messageLabel.setColor(Color.WHITE);
+
+        Table messageTable = new Table();
+        messageTable.setBackground(skin.newDrawable("white", new Color(0, 0, 0, 0.7f)));
+        messageTable.add(messageLabel).pad(10).expandX().fillX();
+
         // Dodanie obszarów do głównej tabeli
         mainTable.add(leftSideMenu).width(200).padLeft(10).fill().top();
         mainTable.add().expand().fill();
         mainTable.add(rightSideMenu).width(400).fill().top();
+
+        mainTable.row();
+        mainTable.add(messageTable).colspan(3).expandX().fillX().height(50).padBottom(20);
 
         // Konfiguracja obsługi wejścia
         InputAdapter gameInput = new InputAdapter() {
@@ -205,15 +249,16 @@ public class GameScreen implements Screen {
                 Vector3 worldCoords = camera.unproject(new Vector3(screenX, screenY, 0));
 
                 if (worldCoords.x < penOffsetX) {
-                    int gridX = (int) (worldCoords.x / TILE_SIZE);
-                    int gridY = (int) (worldCoords.y / TILE_SIZE);
-                    handlePlotClick(gridX, gridY);
-
+                    int gridX = (int) ((worldCoords.x - X_OFFSET)/ TILE_SIZE);
+                    int gridY = (int) ((worldCoords.y - Y_OFFSET) / TILE_SIZE);
+                    if (gridX >= 0 && gridY >= 0 && gridX < farm.getWidth() && gridY < farm.getHeight()) {
+                        handlePlotClick(gridX, gridY);
+                    }
                     lastProcessedX = gridX;
                     lastProcessedY = gridY;
                 } else {
                     float penWorldX = worldCoords.x - penOffsetX;
-                    float penWorldY = worldCoords.y;
+                    float penWorldY = worldCoords.y - Y_OFFSET;
                     int penX = (int) (penWorldX / PEN_SIZE);
                     int penY = (int) (penWorldY / PEN_SIZE);
 
@@ -226,17 +271,19 @@ public class GameScreen implements Screen {
 
             @Override
             public boolean touchDragged(int screenX, int screenY, int pointer) {
-                if (!isDragging || (currentAction != Action.PLANT && currentAction != Action.HARVEST)) {
+                if (!isDragging || (currentAction != Action.PLANT && currentAction != Action.HARVEST && currentAction != Action.WATER)) {
                     return false;
                 }
 
                 Vector3 worldCoords = camera.unproject(new Vector3(screenX, screenY, 0));
                 if (worldCoords.x < penOffsetX) {
-                    int gridX = (int) (worldCoords.x / TILE_SIZE);
-                    int gridY = (int) (worldCoords.y / TILE_SIZE);
+                    int gridX = (int) ((worldCoords.x - X_OFFSET) / TILE_SIZE);
+                    int gridY = (int) ((worldCoords.y - Y_OFFSET) / TILE_SIZE);
 
                     if (gridX != lastProcessedX || gridY != lastProcessedY) {
-                        handlePlotClick(gridX, gridY);
+                        if (gridX >= 0 && gridY >= 0 && gridX < farm.getWidth() && gridY < farm.getHeight()) {
+                            handlePlotClick(gridX, gridY);
+                        }
 
                         lastProcessedX = gridX;
                         lastProcessedY = gridY;
@@ -253,6 +300,61 @@ public class GameScreen implements Screen {
         };
 
         Gdx.input.setInputProcessor(new InputMultiplexer(stage, gameInput));
+    }
+
+    private void saveGame() {
+        try {
+            String currentActionStr = switch (currentAction) {
+                case PLANT -> "PLANT";
+                case WATER -> "WATER";
+                case HARVEST -> "HARVEST";
+                case FEED -> "FEED";
+            };
+
+            saveManager.saveGame(player, farm, gameClock, weather, selectedPlant, currentActionStr);
+            showMessage("Gra zapisana!", Color.GREEN);
+        } catch (Exception e) {
+            showMessage("Błąd podczas zapisywania!", Color.RED);
+            Gdx.app.error("GameScreen", "Błąd zapisu: " + e.getMessage());
+        }
+    }
+
+    private void showMessage(String text, Color color) {
+        messageLabel.setText(text);
+        messageLabel.setColor(color);
+        messageTimer = MESSAGE_DISPLAY_TIME;
+    }
+
+    private void loadGame() {
+        try {
+            GameState gameState = saveManager.loadGame();
+            if (gameState != null) {
+                saveManager.applyGameState(gameState, player, farm, gameClock, weather);
+
+                // Przywróć wybraną roślinę
+                if (gameState.selectedPlant != null) {
+                    selectedPlant = PlantType.getByName(gameState.selectedPlant);
+                }
+
+                // Przywróć akcję
+                if (gameState.currentAction != null) {
+                    try {
+                        currentAction = Action.valueOf(gameState.currentAction);
+                    } catch (IllegalArgumentException e) {
+                        currentAction = Action.PLANT;
+                    }
+                }
+
+                // Odśwież UI
+                updatePlayerStatus();
+                showMessage("Gra wczytana!", Color.GREEN);
+            } else {
+                showMessage("Brak zapisu do wczytania!", Color.YELLOW);
+            }
+        } catch (Exception e) {
+            showMessage("Błąd podczas wczytywania!", Color.RED);
+            Gdx.app.error("GameScreen", "Błąd wczytywania: " + e.getMessage());
+        }
     }
 
     private void handlePlotClick(int x, int y) {
@@ -547,14 +649,14 @@ public class GameScreen implements Screen {
 
                 if (!plot.isBlocked() || hasUnlockedNeighborPlot(x, y)) {
                     shapeRenderer.setColor(baseColor);
-                    shapeRenderer.rect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE - 2, TILE_SIZE - 2);
+                    shapeRenderer.rect(x * TILE_SIZE + X_OFFSET, y * TILE_SIZE + Y_OFFSET, TILE_SIZE - 2, TILE_SIZE - 2);
                 }
 
                 // Plant
                 if (plot.getPlant() != null) {
                     Plant plant = plot.getPlant();
-                    float centerX = x * TILE_SIZE + TILE_SIZE / 4f;
-                    float centerY = y * TILE_SIZE + TILE_SIZE / 4f;
+                    float centerX = x * TILE_SIZE + X_OFFSET + TILE_SIZE / 4f;
+                    float centerY = y * TILE_SIZE + Y_OFFSET + TILE_SIZE / 4f;
                     float size = TILE_SIZE / 2f;
 
                     shapeRenderer.setColor(plant.getType().getColor());
@@ -563,8 +665,8 @@ public class GameScreen implements Screen {
                     // Kropla wody
                     if (plant.isWatered()) {
                         float waterSize = TILE_SIZE / 4f;
-                        float waterX = x * TILE_SIZE + TILE_SIZE - waterSize - 4;
-                        float waterY = y * TILE_SIZE + 4;
+                        float waterX = x * TILE_SIZE + X_OFFSET + TILE_SIZE - waterSize - 4;
+                        float waterY = y * TILE_SIZE + Y_OFFSET + 4;
 
                         shapeRenderer.setColor(Color.CYAN);
                         shapeRenderer.rect(waterX, waterY, waterSize, waterSize);
@@ -584,7 +686,7 @@ public class GameScreen implements Screen {
                     case OCCUPIED -> Color.BROWN;
                 };
                 float drawX = px * PEN_SIZE + penOffsetX;
-                float drawY = py * PEN_SIZE;
+                float drawY = py * PEN_SIZE + Y_OFFSET;
 
                 if (!pen.isBlocked() || hasUnlockedNeighborPen(px, py)) {
                     shapeRenderer.setColor(penColor);
@@ -640,15 +742,15 @@ public class GameScreen implements Screen {
                 if (plot.isBlocked() && hasUnlockedNeighborPlot(x, y)) {
                     String plusSign = "+";
                     GlyphLayout plusLayout = new GlyphLayout(font, plusSign);
-                    float plusX = x * TILE_SIZE + (TILE_SIZE - plusLayout.width) / 2;
-                    float plusY = y * TILE_SIZE + (TILE_SIZE + plusLayout.height) / 2;
+                    float plusX = x * TILE_SIZE + X_OFFSET + (TILE_SIZE - plusLayout.width) / 2;
+                    float plusY = y * TILE_SIZE + Y_OFFSET + (TILE_SIZE + plusLayout.height) / 2;
                     font.setColor(Color.WHITE);
                     font.draw(batch, plusSign, plusX, plusY);
 
                     String priceText = farm.getPlotPrice(x, y) + "$";
                     GlyphLayout priceLayout = new GlyphLayout(font, priceText);
-                    float priceX = x * TILE_SIZE + 2;
-                    float priceY = y * TILE_SIZE + priceLayout.height + 2;
+                    float priceX = x * TILE_SIZE + X_OFFSET + 2;
+                    float priceY = y * TILE_SIZE + Y_OFFSET + priceLayout.height + 2;
                     font.getData().setScale(1f);
                     font.draw(batch, priceText, priceX, priceY);
                 }
@@ -658,8 +760,8 @@ public class GameScreen implements Screen {
                     String timeText = String.format("%.0f", timeLeft);
                     GlyphLayout layout = new GlyphLayout(font, timeText);
 
-                    float textX = x * TILE_SIZE + (TILE_SIZE - layout.width) / 2;
-                    float textY = y * TILE_SIZE + (TILE_SIZE + layout.height) / 2;
+                    float textX = x * TILE_SIZE + X_OFFSET + (TILE_SIZE - layout.width) / 2;
+                    float textY = y * TILE_SIZE + Y_OFFSET + (TILE_SIZE + layout.height) / 2;
 
                     font.setColor(Color.BLACK);
                     font.draw(batch, timeText, textX-1, textY);
@@ -679,7 +781,7 @@ public class GameScreen implements Screen {
                 if (pen == null) continue;
 
                 float drawX = px * PEN_SIZE + penOffsetX;
-                float drawY = py * PEN_SIZE;
+                float drawY = py * PEN_SIZE + Y_OFFSET;
 
                 if (pen.isBlocked() && hasUnlockedNeighborPen(px, py)) {
                     String plusSign = "+";
@@ -759,6 +861,13 @@ public class GameScreen implements Screen {
 
         stage.act(delta);
         stage.draw();
+
+        if (messageTimer > 0) {
+            messageTimer -= delta;
+            if (messageTimer <= 0) {
+                messageLabel.setText("");
+            }
+        }
     }
 
 

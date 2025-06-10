@@ -1,6 +1,7 @@
 package com.farmgame.game;
 
 public class Animal {
+
     public enum ProductState {
         NOT_FED, PRODUCTION, READY
     }
@@ -62,4 +63,11 @@ public class Animal {
         return timeToNextProduct;
     }
 
+    public void setProductState(ProductState productState) {
+        this.productState = productState;
+    }
+
+    public void setTimeToNextProduct(float timeToNextProduct) {
+        this.timeToNextProduct = timeToNextProduct;
+    }
 }

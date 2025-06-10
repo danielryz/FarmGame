@@ -49,5 +49,22 @@ public class GameClock {
         return currentWeekDay;
     }
 
+    public float getCurrentTime() {
+        return timeAccumulator;
+    }
+
+    public void setDay(int day) {
+        currentDay = day;
+    }
+    public void setWeekDay(WeekDay weekDay) {
+        currentWeekDay = weekDay;
+    }
+    public void setTimeOfDay(TimeOfDay timeOfDay) {
+        this.timeOfDay = timeOfDay;
+    }
+
+    public void setCurrentTime(float currentTime) {
+        timeAccumulator = currentTime;
+    }
 
 }
