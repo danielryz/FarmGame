@@ -8,10 +8,7 @@ import com.badlogic.gdx.scenes.scene2d.Actor;
 import com.badlogic.gdx.scenes.scene2d.ui.*;
 import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener;
 import com.badlogic.gdx.utils.Align;
-import com.farmgame.game.Animal;
-import com.farmgame.game.AnimalDatabase;
-import com.farmgame.game.AnimalPen;
-import com.farmgame.game.AnimalType;
+import com.farmgame.game.*;
 import com.farmgame.player.Player;
 
 public class AnimalSelectionWindow extends Window {
@@ -95,10 +92,10 @@ public class AnimalSelectionWindow extends Window {
 
                                 remove();
                             } else {
-                                System.out.println("Za mało pieniędzy na kupno: " + type.getName());
+                                MessageManager.warning("Za mało pieniędzy na kupno: " + type.getName());
                             }
                         } else {
-                            System.out.println("Zagroda jest już zajęta!");
+                            MessageManager.warning("Zagroda jest już zajęta!");
                         }
                     }
                 });

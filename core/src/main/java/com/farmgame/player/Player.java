@@ -1,6 +1,13 @@
 package com.farmgame.player;
 
 
+import com.badlogic.gdx.utils.Timer;
+import com.farmgame.game.AnimalDatabase;
+import com.farmgame.game.MessageManager;
+import com.farmgame.game.PlantDatabase;
+
+import java.util.List;
+
 public class Player {
     private String name;
     private int money;
@@ -11,7 +18,7 @@ public class Player {
 
     public Player(String name) {
         this.name = name;
-        this.money = 99999;
+        this.money = 999;
         this.level = 1;
         this.exp = 0;
         this.expToNextLevel = 10;
@@ -27,7 +34,40 @@ public class Player {
         while (exp >= expToNextLevel) {
             level++;
             expToNextLevel += (int) (expToNextLevel * 1.5);
-            System.out.println("Awansowałeś na poziom " + level + "!");
+
+            List<String> unlockedPlants = PlantDatabase.getByLevel(level);
+            List<String> unlockedAnimals = AnimalDatabase.getByLevel(level);
+
+
+            float delay = 0f;
+            Timer.schedule(new Timer.Task() {
+                @Override
+                public void run() {
+                    MessageManager.success("Awansowałeś na poziom " + level + "!");
+                }
+            }, delay);
+            delay += 0.5f;
+
+            if(!unlockedAnimals.isEmpty()) {
+                String msg = "Odblokowane zwierzęta: " + String.join(", ", unlockedAnimals);
+                Timer.schedule(new Timer.Task() {
+                    @Override
+                    public void run() {
+                        MessageManager.success(msg);
+                    }
+                }, delay);
+                delay += 0.5f;
+            }
+
+            if(!unlockedPlants.isEmpty()) {
+                String msg = "Odblokowane nasiona: " + String.join(", ", unlockedPlants);
+                Timer.schedule(new Timer.Task() {
+                    @Override
+                    public void run() {
+                        MessageManager.success(msg);
+                    }
+                }, delay);
+            }
         }
     }
 

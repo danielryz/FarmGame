@@ -25,6 +25,7 @@ import com.farmgame.ui.ChoosePlantToFedWindow;
 import com.farmgame.ui.InventorySellWindow;
 import com.farmgame.ui.PlantSelectionWindow;
 
+
 import java.util.ArrayList;
 
 public class GameScreen implements Screen {
@@ -98,6 +99,8 @@ public class GameScreen implements Screen {
 
         skin = new Skin(Gdx.files.internal("assets/uiskin.json"));
         stage = new Stage(new ScreenViewport(), batch);
+
+        MessageManager.initialize(skin, stage);
 
         // Główna struktura interfejsu
         Table mainTable = new Table();
@@ -369,7 +372,9 @@ public class GameScreen implements Screen {
                 player.addExp(2);
                 updatePlayerStatus();
             }
-            return;
+            else {
+                MessageManager.warning("Za mało pieniędzy!");
+            }
         }
 
         switch (currentAction) {
@@ -383,7 +388,7 @@ public class GameScreen implements Screen {
                         plot.plant(new Plant(selectedPlant));
 
                     } else {
-                        System.out.println("Za mało pieniędzy!");
+                        MessageManager.error("Za mało pieniędzy!");
                     }
                 }
             }
@@ -421,7 +426,7 @@ public class GameScreen implements Screen {
                 player.addExp(5);
                 updatePlayerStatus();
             } else {
-                System.out.println("Za mało pieniędzy na odblokowanie zagrody!");
+                MessageManager.warning("Za mało pieniędzy na odblokowanie zagrody!");
             }
             return;
         }
@@ -466,7 +471,7 @@ public class GameScreen implements Screen {
 
                                     boolean fed = animal.fed(chosenPlant.getName());
                                     if (fed) {
-                                        System.out.println("Zwierzę nakarmione rośliną: " + chosenPlant.getName());
+                                        MessageManager.info("Zwierzę nakarmione rośliną: " + chosenPlant.getName());
                                         player.addExp(1);
                                         updatePlayerStatus();
 
@@ -474,7 +479,7 @@ public class GameScreen implements Screen {
                                             currentInventoryWindow.refreshInventory();
                                         }
                                     } else {
-                                        System.out.println("Nie udało się nakarmić zwierzęcia tym rodzajem rośliny.");
+                                        MessageManager.warning("Nie udało się nakarmić zwierzęcia tym rodzajem rośliny.");
                                     }
                                 }
                             );
@@ -485,10 +490,10 @@ public class GameScreen implements Screen {
                                 (stage.getHeight() - choosePlantWindow.getHeight()) / 2f
                             );
                         } else {
-                            System.out.println("Nie posiadasz żadnej odpowiedniej rośliny do karmienia w magazynie!");
+                            MessageManager.warning("Nie posiadasz żadnej odpowiedniej rośliny do karmienia w magazynie!");
                         }
                     } else {
-                        System.out.println("Zwierzę nie może być teraz karmione (aktualny stan: " + productState + ")");
+                        MessageManager.warning("Zwierzę nie może być teraz karmione (aktualny stan: " + productState + ")");
                     }
                 }
 
@@ -503,18 +508,18 @@ public class GameScreen implements Screen {
                             InventoryItem newItem = new InventoryItem(productName, 1, sellPrice);
                             player.getPlayerInventory().addItem(newItem);
 
-                            System.out.println("Zebrano produkt: " + productName);
+                            MessageManager.info("Zebrano produkt: " + productName);
                             player.addExp(1);
                             updatePlayerStatus();
                         } else {
-                            System.out.println("Nie udało się zebrać produktu.");
+                            MessageManager.warning("Nie udało się zebrać produktu.");
                         }
                     } else {
-                        System.out.println("Produkt nie jest gotowy do zebrania. Stan zwierzęcia: " + productState);
+                        MessageManager.warning("Produkt nie jest gotowy do zebrania. Stan zwierzęcia: " + productState);
                     }
                 }
                 default -> {
-                    System.out.println("Ta zagroda jest już zajęta, użyj 'Nakarm' lub 'Zbierz'.");
+                    MessageManager.warning("Ta zagroda jest już zajęta, użyj 'Nakarm' lub 'Zbierz'.");
                 }
             }
         }
@@ -529,7 +534,7 @@ public class GameScreen implements Screen {
 
                 PlantSelectionWindow plantSelectionWindow = new PlantSelectionWindow("Wybierz roślinę", skin, chosenPlant -> {
                     selectedPlant = chosenPlant;
-                    System.out.println("Wybrano roślinę: " + chosenPlant.getName());
+                    MessageManager.info("Wybrano roślinę: " + chosenPlant.getName());
 
                     currentAction = Action.PLANT;
                     if (selectedButton != null) selectedButton.setColor(Color.WHITE);
