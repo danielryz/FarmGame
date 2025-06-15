@@ -3,6 +3,7 @@ package com.farmgame.ui;
 import com.badlogic.gdx.scenes.scene2d.Actor;
 import com.badlogic.gdx.scenes.scene2d.ui.*;
 import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener;
+import com.farmgame.game.MessageManager;
 import com.farmgame.player.Inventory;
 import com.farmgame.player.InventoryItem;
 import com.farmgame.player.Player;
@@ -86,7 +87,7 @@ public class InventorySellWindow extends Window {
 
                     rebuildItemList(player);
                 } else {
-                    System.out.println("Brak przedmiotów w Magazynie!");
+                    MessageManager.warning("Brak przedmiotów w Magazynie!");
                 }
             }
         });

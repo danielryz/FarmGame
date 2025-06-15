@@ -3,6 +3,7 @@ package com.farmgame.game;
 import com.badlogic.gdx.graphics.Color;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 public class PlantDatabase {
     private static final List<PlantType> plantTypes = new ArrayList<>();
@@ -34,5 +35,12 @@ public class PlantDatabase {
             .filter(p -> p.getName().equalsIgnoreCase(name))
             .findFirst()
             .orElse(null);
+    }
+
+    public static List<String> getByLevel(int level) {
+        return plantTypes.stream()
+            .filter(a -> a.getRequiredLevel() == level)
+            .map(PlantType::getName)
+            .collect(Collectors.toList());
     }
 }

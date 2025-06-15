@@ -3,6 +3,7 @@ package com.farmgame.game;
 import com.badlogic.gdx.graphics.Color;
 import java.util.*;
 import java.util.List;
+import java.util.stream.Collectors;
 
 public class AnimalDatabase {
     private static final List<AnimalType> animalTypes = new ArrayList<>();
@@ -23,5 +24,12 @@ public class AnimalDatabase {
             .filter(a -> a.getName().equalsIgnoreCase(name))
             .findFirst()
             .orElse(null);
+    }
+
+    public static List<String> getByLevel(int level) {
+        return animalTypes.stream()
+            .filter(a -> a.getRequiredLevel() == level)
+            .map(AnimalType::getName)
+            .collect(Collectors.toList());
     }
 }

@@ -40,8 +40,8 @@ public class PlantSelectionWindow extends Window {
             Image colorBox = new Image(new Texture(pixmap));
             pixmap.dispose();
 
-            String infoText = String.format("%s\nKoszt: %d $ | Sprzedaż: %d $\nCzas wzrostu: %.1fs | Wymagany poziom: %d",
-                type.getName(), type.getSeedPrice(), type.getSellPrice(), type.getGrowthTime(), type.getRequiredLevel());
+            String infoText = String.format("%s\nKoszt: %d $ | Sprzedaż: %d $\nCzas wzrostu: %.1fs",
+                type.getName(), type.getSeedPrice(), type.getSellPrice(), type.getGrowthTime());
             Label plantInfoLabel = new Label(infoText, skin);
             plantInfoLabel.setWrap(true);
 
