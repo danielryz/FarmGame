@@ -11,8 +11,9 @@ public class AnimalType {
     private final float productTime;
     private final int sellPrice;
     private final Color color;
+    private final int requiredLevel;
 
-    public AnimalType(String name, int cost, Set<String> feedSet, String productName, float productTime, int sellPrice, Color color ) {
+    public AnimalType(String name, int cost, Set<String> feedSet, String productName, float productTime, int sellPrice, Color color, int requiredLevel) {
         this.name = name;
         this.cost = cost;
         this.feedSet = feedSet;
@@ -20,6 +21,7 @@ public class AnimalType {
         this.productTime = productTime;
         this.sellPrice = sellPrice;
         this.color = color;
+        this.requiredLevel = requiredLevel;
     }
     public String getName() {
         return name;
@@ -44,5 +46,8 @@ public class AnimalType {
     }
     public Color getColor() {
         return color;
+    }
+    public int getRequiredLevel() {
+        return requiredLevel;
     }
 }

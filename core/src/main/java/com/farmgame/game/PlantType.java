@@ -8,13 +8,15 @@ public class PlantType {
     private final Color color;
     private final int seedPrice;
     private final int sellPrice;
+    private final int requiredLevel;
 
-    public PlantType(String name, float growthTime, Color color, int seedPrice, int sellPrice) {
+    public PlantType(String name, float growthTime, Color color, int seedPrice, int sellPrice, int requiredLevel) {
         this.name = name;
         this.growthTime = growthTime;
         this.color = color;
         this.seedPrice = seedPrice;
         this.sellPrice = sellPrice;
+        this.requiredLevel = requiredLevel;
     }
 
     public String getName() {
@@ -35,6 +37,10 @@ public class PlantType {
 
     public int getSellPrice() {
         return sellPrice;
+    }
+
+    public int getRequiredLevel() {
+        return requiredLevel;
     }
 
     public static PlantType getByName(String name) {
