@@ -534,7 +534,7 @@ public class GameScreen implements Screen {
                     currentAction = Action.PLANT;
                     if (selectedButton != null) selectedButton.setColor(Color.WHITE);
                     selectedButton = null;
-                });
+                }, player);
                 stage.addActor(plantSelectionWindow);
 
                 plantSelectionWindow.setPosition(
