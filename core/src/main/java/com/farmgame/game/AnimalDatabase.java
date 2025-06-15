@@ -8,9 +8,9 @@ public class AnimalDatabase {
     private static final List<AnimalType> animalTypes = new ArrayList<>();
 
     static {
-        animalTypes.add(new AnimalType("Krowa", 200, Set.of("Trawa", "Pszenica", "Sałata", "Kapusta"), "Mleko", 40f, 40, Color.BLACK));
-        animalTypes.add(new AnimalType("Kura", 100, Set.of("Pszenica", "Kukurydza"), "Jajko", 20f, 30, Color.YELLOW));
-        animalTypes.add(new AnimalType("Owca", 300, Set.of("Trawa"), "Wełna", 50f, 50, Color.WHITE));
+        animalTypes.add(new AnimalType("Krowa", 200, Set.of("Trawa", "Pszenica", "Sałata", "Kapusta"), "Mleko", 40f, 40, Color.BLACK, 1));
+        animalTypes.add(new AnimalType("Kura", 100, Set.of("Pszenica", "Kukurydza"), "Jajko", 20f, 30, Color.YELLOW, 5));
+        animalTypes.add(new AnimalType("Owca", 300, Set.of("Trawa"), "Wełna", 50f, 50, Color.WHITE, 10));
 
     }
 
