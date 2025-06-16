@@ -15,6 +15,7 @@ import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener;
 import com.badlogic.gdx.utils.Align;
 import com.badlogic.gdx.utils.viewport.ScreenViewport;
 import com.badlogic.gdx.utils.viewport.Viewport;
+import com.farmgame.FarmGame;
 import com.farmgame.game.*;
 import com.farmgame.game_save.GameState;
 import com.farmgame.player.InventoryItem;
@@ -78,16 +79,59 @@ public class GameScreen implements Screen {
     private int lastProcessedY = -1;
     private boolean isDragging = false;
 
+    private int currentSaveSlot = 1;
+    private FarmGame game;
+
     public GameScreen() {
-        this.farm = new Farm(10, 10, 5, 5);
+        this(null, "FarmGame", 1.0f, 0);
+    }
+
+    public GameScreen(FarmGame game, String playerName, float difficultyMultiplier, int saveSlot) {
+        this.game = game;
         this.shapeRenderer = new ShapeRenderer();
         this.batch = new SpriteBatch();
         this.camera = new OrthographicCamera();
         this.gameViewport = new ScreenViewport(camera);
         this.gameClock = new GameClock();
         this.weather = new Weather();
-        this.player = new Player("FarmGame");
-        saveManager = new SaveManager();
+
+        if (game != null) {
+            saveManager = new SaveManager(game.getDifficultyManager());
+        } else {
+            saveManager = new SaveManager();
+            saveManager.setDifficultyMultiplier(difficultyMultiplier);
+        }
+
+        this.farm = new Farm(10, 10, 5, 5, saveManager.getDifficultyManager());
+
+        if (saveSlot > 0 && saveSlot <= 5) {
+            this.currentSaveSlot = saveSlot;
+        }
+
+        skin = new Skin(Gdx.files.internal("assets/uiskin.json"));
+
+        messageLabel = new Label("", skin);
+        messageLabel.setAlignment(Align.center);
+        messageLabel.setFontScale(1.2f);
+        messageLabel.setColor(Color.WHITE);
+
+        if (saveSlot > 0 && saveManager.saveExists(saveSlot)) {
+            this.player = new Player("Temp");
+        } else {
+            this.player = new Player(playerName);
+
+            int startingMoney = (int)(player.getMoney() * saveManager.getDifficultyMultiplier());
+            this.player.setMoney(startingMoney);
+        }
+
+        playerNameLabel = new Label("Imie: " + player.getName(), skin);
+        playerLevelLabel = new Label("Poziom: " + player.getLevel(), skin);
+        playerExpLabel = new Label("Exp: " + player.getExp(), skin);
+        expToNextLevelLabel = new Label("Exp do kolejnego poziomu: " + player.getExpToNextLevel(), skin);
+
+        if (saveSlot > 0 && saveManager.saveExists(saveSlot)) {
+            loadGame(saveSlot);
+        }
 
         this.penOffsetX = farm.getWidth() * TILE_SIZE + 64 + X_OFFSET;
 
@@ -97,7 +141,6 @@ public class GameScreen implements Screen {
         BitmapFont font16 = generator.generateFont(parameter);
         generator.dispose();
 
-        skin = new Skin(Gdx.files.internal("assets/uiskin.json"));
         stage = new Stage(new ScreenViewport(), batch);
 
         MessageManager.initialize(skin, stage);
@@ -113,14 +156,14 @@ public class GameScreen implements Screen {
         saveButton.addListener(new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
-                saveGame();
+                showSaveSlotDialog();
             }
         });
 
         loadButton.addListener(new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
-                loadGame();
+                showLoadSlotDialog();
             }
         });
 
@@ -137,11 +180,6 @@ public class GameScreen implements Screen {
         Table leftSideMenu = new Table();
         leftSideMenu.top().pad(10).left();
 
-        playerNameLabel = new Label("Imie: " + player.getName(), skin);
-        playerLevelLabel = new Label("Poziom: " + player.getLevel(), skin);
-        playerExpLabel = new Label("Exp: " + player.getExp(), skin);
-        expToNextLevelLabel = new Label("Exp do kolejnego poziomu: " + player.getExpToNextLevel(), skin);
-
         leftSideMenu.add(playerNameLabel).left().row();
         leftSideMenu.add(playerLevelLabel).left().row();
         leftSideMenu.add(playerExpLabel).left().row();
@@ -153,7 +191,7 @@ public class GameScreen implements Screen {
         timeWeatherTable.add(clockLabel).left().row();
         timeWeatherTable.add(weatherLabel).left();
         topBar.add(timeWeatherTable).left().expandX();
-        topBar.add(moneyLabel).right();
+        topBar.add(moneyLabel);
         rightSideMenu.add(topBar).fillX().expandX().padBottom(10).row();
 
         // Kontener na przyciski i akcje
@@ -223,11 +261,6 @@ public class GameScreen implements Screen {
         scrollPane.setScrollingDisabled(true, false);
 
         rightSideMenu.add(scrollPane).expand().fill().top();
-        //Labelka message
-        messageLabel = new Label("", skin);
-        messageLabel.setAlignment(Align.center);
-        messageLabel.setFontScale(1.2f);
-        messageLabel.setColor(Color.WHITE);
 
         Table messageTable = new Table();
         messageTable.setBackground(skin.newDrawable("white", new Color(0, 0, 0, 0.7f)));
@@ -236,12 +269,12 @@ public class GameScreen implements Screen {
         // Dodanie obszarów do głównej tabeli
         mainTable.add(leftSideMenu).width(200).padLeft(10).fill().top();
         mainTable.add().expand().fill();
-        mainTable.add(rightSideMenu).width(400).fill().top();
+        mainTable.add(rightSideMenu).width(500).fill().top();
 
         mainTable.row();
         mainTable.add(messageTable).colspan(3).expandX().fillX().height(50).padBottom(20);
 
-        // Konfiguracja obsługi wejścia
+        // Konfiguracja obsługi klikania
         InputAdapter gameInput = new InputAdapter() {
             @Override
             public boolean touchDown(int screenX, int screenY, int pointer, int button) {
@@ -272,6 +305,7 @@ public class GameScreen implements Screen {
                 return true;
             }
 
+            // Obsługa kliknij i przytrzymaj
             @Override
             public boolean touchDragged(int screenX, int screenY, int pointer) {
                 if (!isDragging || (currentAction != Action.PLANT && currentAction != Action.HARVEST && currentAction != Action.WATER)) {
@@ -314,8 +348,8 @@ public class GameScreen implements Screen {
                 case FEED -> "FEED";
             };
 
-            saveManager.saveGame(player, farm, gameClock, weather, selectedPlant, currentActionStr);
-            showMessage("Gra zapisana!", Color.GREEN);
+            saveManager.saveGame(player, farm, gameClock, weather, selectedPlant, currentActionStr, currentSaveSlot);
+            showMessage("Gra zapisana w slocie " + currentSaveSlot + "!", Color.GREEN);
         } catch (Exception e) {
             showMessage("Błąd podczas zapisywania!", Color.RED);
             Gdx.app.error("GameScreen", "Błąd zapisu: " + e.getMessage());
@@ -328,11 +362,168 @@ public class GameScreen implements Screen {
         messageTimer = MESSAGE_DISPLAY_TIME;
     }
 
+    private void showSaveSlotDialog() {
+        Dialog dialog = new Dialog("Wybierz slot zapisu", skin);
+
+        Table contentTable = new Table();
+        contentTable.pad(20);
+
+        contentTable.add(new Label("Wybierz slot do zapisania gry:", skin)).colspan(2).left().padBottom(20).row();
+
+        ButtonGroup<TextButton> slotGroup = new ButtonGroup<>();
+        slotGroup.setMinCheckCount(1);
+        slotGroup.setMaxCheckCount(1);
+
+        Table slotTable = new Table();
+
+        for (int i = 1; i <= 5; i++) {
+            final int slotNumber = i;
+            TextButton slotButton = new TextButton("Slot " + i, skin, "toggle");
+
+            boolean saveExists = saveManager.saveExists(slotNumber);
+            if (saveExists) {
+                slotButton.setText("Slot " + i + " (Zajęty)");
+            }
+
+            if (slotNumber == currentSaveSlot) {
+                slotButton.setChecked(true);
+            }
+
+            slotButton.addListener(new ChangeListener() {
+                @Override
+                public void changed(ChangeEvent event, Actor actor) {
+                    if (slotButton.isChecked()) {
+                        currentSaveSlot = slotNumber;
+                    }
+                }
+            });
+
+            slotGroup.add(slotButton);
+            slotTable.add(slotButton).pad(5);
+
+            if (i % 3 == 0) {
+                slotTable.row();
+            }
+        }
+
+        contentTable.add(slotTable).colspan(2).row();
+
+        dialog.getContentTable().add(contentTable).expand().fill();
+
+        TextButton saveButton = new TextButton("Zapisz", skin);
+        TextButton cancelButton = new TextButton("Anuluj", skin);
+
+        dialog.button(saveButton);
+        dialog.button(cancelButton);
+
+        saveButton.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                saveGame();
+                dialog.hide();
+            }
+        });
+
+        cancelButton.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                dialog.hide();
+            }
+        });
+
+        dialog.show(stage);
+    }
+
+    private void showLoadSlotDialog() {
+        Dialog dialog = new Dialog("Wybierz slot wczytania", skin);
+
+        Table contentTable = new Table();
+        contentTable.pad(20);
+
+        contentTable.add(new Label("Wybierz slot do wczytania gry:", skin)).colspan(2).left().padBottom(20).row();
+
+        ButtonGroup<TextButton> slotGroup = new ButtonGroup<>();
+        slotGroup.setMinCheckCount(1);
+        slotGroup.setMaxCheckCount(1);
+
+        Table slotTable = new Table();
+        boolean anySlotAvailable = false;
+
+        for (int i = 1; i <= 5; i++) {
+            final int slotNumber = i;
+            TextButton slotButton = new TextButton("Slot " + i, skin, "toggle");
+
+            boolean saveExists = saveManager.saveExists(slotNumber);
+            if (!saveExists) {
+                slotButton.setText("Slot " + i + " (Pusty)");
+                slotButton.setDisabled(true);
+            } else {
+                anySlotAvailable = true;
+                if (slotNumber == currentSaveSlot) {
+                    slotButton.setChecked(true);
+                }
+            }
+
+            slotButton.addListener(new ChangeListener() {
+                @Override
+                public void changed(ChangeEvent event, Actor actor) {
+                    if (slotButton.isChecked()) {
+                        currentSaveSlot = slotNumber;
+                    }
+                }
+            });
+
+            slotGroup.add(slotButton);
+            slotTable.add(slotButton).pad(5);
+
+            if (i % 3 == 0) {
+                slotTable.row();
+            }
+        }
+
+        contentTable.add(slotTable).colspan(2).row();
+
+        dialog.getContentTable().add(contentTable).expand().fill();
+
+        TextButton loadButton = new TextButton("Wczytaj", skin);
+        TextButton cancelButton = new TextButton("Anuluj", skin);
+
+        dialog.button(loadButton);
+        dialog.button(cancelButton);
+
+        if (!anySlotAvailable) {
+            loadButton.setDisabled(true);
+        }
+
+        loadButton.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                loadGame();
+                dialog.hide();
+            }
+        });
+
+        cancelButton.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                dialog.hide();
+            }
+        });
+
+        dialog.show(stage);
+    }
+
     private void loadGame() {
+        loadGame(currentSaveSlot);
+    }
+
+    private void loadGame(int slot) {
         try {
-            GameState gameState = saveManager.loadGame();
+            GameState gameState = saveManager.loadGame(slot);
             if (gameState != null) {
                 saveManager.applyGameState(gameState, player, farm, gameClock, weather);
+
+                farm.setDifficultyMultiplier(saveManager.getDifficultyMultiplier());
 
                 // Przywróć wybraną roślinę
                 if (gameState.selectedPlant != null) {
@@ -350,9 +541,9 @@ public class GameScreen implements Screen {
 
                 // Odśwież UI
                 updatePlayerStatus();
-                showMessage("Gra wczytana!", Color.GREEN);
+                showMessage("Gra wczytana ze slotu " + slot + "!", Color.GREEN);
             } else {
-                showMessage("Brak zapisu do wczytania!", Color.YELLOW);
+                showMessage("Brak zapisu do wczytania w slocie " + slot + "!", Color.YELLOW);
             }
         } catch (Exception e) {
             showMessage("Błąd podczas wczytywania!", Color.RED);
@@ -380,12 +571,12 @@ public class GameScreen implements Screen {
         switch (currentAction) {
             case PLANT -> {
                 if (selectedPlant != null && plot.getState() == Plot.State.EMPTY) {
-                    int cost = selectedPlant.getSeedPrice();
+                    int cost = (int)(selectedPlant.getSeedPrice() / saveManager.getDifficultyMultiplier());
                     if (player.getMoney() >= cost) {
                         player.addMoney(-cost);
                         player.addExp(1);
                         updatePlayerStatus();
-                        plot.plant(new Plant(selectedPlant));
+                        plot.plant(selectedPlant);
 
                     } else {
                         MessageManager.error("Za mało pieniędzy!");
@@ -400,10 +591,13 @@ public class GameScreen implements Screen {
             case HARVEST -> {
                 if (plot.getState() == Plot.State.READY_TO_HARVEST && plot.getPlant() != null) {
                     PlantType type = plot.getPlant().getType();
+                    int baseSellPrice = type.getSellPrice();
+                    int adjustedSellPrice = (int)(baseSellPrice / saveManager.getDifficultyMultiplier());
+
                     InventoryItem newItem = new InventoryItem(
                         type.getName(),
                         1,
-                        type.getSellPrice()
+                        adjustedSellPrice
                     );
 
                     player.getPlayerInventory().addItem(newItem);
@@ -434,7 +628,7 @@ public class GameScreen implements Screen {
         if (pen.getState() == AnimalPen.State.EMPTY) {
             if (currentAction == Action.FEED || currentAction == Action.PLANT || currentAction == Action.WATER || currentAction == Action.HARVEST) {
                 AnimalSelectionWindow animalSelectionWindow = new AnimalSelectionWindow(
-                    "Kup zwierzę", skin, player, pen, () -> updatePlayerStatus()
+                    "Kup zwierzę", skin, player, pen, () -> updatePlayerStatus(), saveManager.getDifficultyManager()
                 );
                 stage.addActor(animalSelectionWindow);
                 animalSelectionWindow.setPosition(
@@ -503,9 +697,10 @@ public class GameScreen implements Screen {
                         boolean collected = animal.collectProduct();
                         if (collected) {
                             String productName = animal.getType().getProductName();
-                            int sellPrice = animal.getType().getSellPrice();
+                            int baseSellPrice = animal.getType().getSellPrice();
+                            int adjustedSellPrice = (int)(baseSellPrice / saveManager.getDifficultyMultiplier());
 
-                            InventoryItem newItem = new InventoryItem(productName, 1, sellPrice);
+                            InventoryItem newItem = new InventoryItem(productName, 1, adjustedSellPrice);
                             player.getPlayerInventory().addItem(newItem);
 
                             MessageManager.info("Zebrano produkt: " + productName);
@@ -539,7 +734,7 @@ public class GameScreen implements Screen {
                     currentAction = Action.PLANT;
                     if (selectedButton != null) selectedButton.setColor(Color.WHITE);
                     selectedButton = null;
-                }, player);
+                }, player, saveManager.getDifficultyManager());
                 stage.addActor(plantSelectionWindow);
 
                 plantSelectionWindow.setPosition(
@@ -880,15 +1075,12 @@ public class GameScreen implements Screen {
 
     private void farmUpdate(float delta) {
         float growthMultiplier = getGrowthMultiplier();
-        boolean canGrow = isGrowthPossible();
 
         for (int x = 0; x < farm.getWidth(); x++) {
             for (int y = 0; y < farm.getHeight(); y++) {
                 Plot plot = farm.getPlot(x, y);
-                if (canGrow){
+                if (plot != null){
                     plot.update(delta * growthMultiplier);
-                } else {
-                    plot.update(0);
                 }
             }
         }
@@ -902,23 +1094,19 @@ public class GameScreen implements Screen {
         }
     }
 
-    private boolean isGrowthPossible(){
-        GameClock.TimeOfDay timeOfDay = gameClock.getTimeOfDay();
-        return timeOfDay != GameClock.TimeOfDay.NIGHT;
-    }
 
     private float getGrowthMultiplier(){
         float timeMultiplier = switch (gameClock.getTimeOfDay()){
             case MORNING -> 1.2f;
             case NOON -> 1.5f;
             case EVENING -> 1.0f;
-            case NIGHT -> 0.0f;
+            case NIGHT -> 0.5f;
         };
 
         float weatherMultiplier = weather.getGrowthMultiplier();
 
         if (gameClock.getTimeOfDay() == GameClock.TimeOfDay.NIGHT) {
-            return 0.0f;
+            return 0.5f;
         }
 
         return timeMultiplier * weatherMultiplier;
@@ -931,10 +1119,6 @@ public class GameScreen implements Screen {
             getPolishWeekDay(gameClock.getWeekDay()),
             getPolishTimeOfDay(gameClock.getTimeOfDay())
         ));
-
-        if (!isGrowthPossible()){
-            timeText.append(" (Rośliny nie rosną)");
-        }
         clockLabel.setText(timeText);
     }
 

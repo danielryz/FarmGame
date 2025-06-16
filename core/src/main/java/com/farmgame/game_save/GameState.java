@@ -7,6 +7,7 @@ public class GameState {
     public SavedWeather weather;
     public String selectedPlant;
     public String currentAction;
+    public float difficultyMultiplier = 1.0f;
 
     public GameState() {
         player = new SavedPlayer();

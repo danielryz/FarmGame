@@ -9,6 +9,7 @@ import com.badlogic.gdx.scenes.scene2d.ui.Window;
 import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener;
 import com.badlogic.gdx.utils.Align;
 import com.badlogic.gdx.utils.Scaling;
+import com.farmgame.game.DifficultyManager;
 import com.farmgame.game.PlantDatabase;
 import com.farmgame.game.PlantType;
 import com.farmgame.player.Player;
@@ -16,10 +17,26 @@ import com.farmgame.player.Player;
 public class PlantSelectionWindow extends Window {
 
     private final OnPlantChosenListener chosenListener;
+    private final DifficultyManager difficultyManager;
 
     public PlantSelectionWindow(String tile, Skin skin, OnPlantChosenListener chosenListener, Player player){
+        this(tile, skin, chosenListener, player, new DifficultyManager());
+    }
+
+    public PlantSelectionWindow(String tile, Skin skin, OnPlantChosenListener chosenListener, Player player, float difficultyMultiplier){
+        this(tile, skin, chosenListener, player, createDifficultyManager(difficultyMultiplier));
+    }
+
+    private static DifficultyManager createDifficultyManager(float multiplier) {
+        DifficultyManager manager = new DifficultyManager();
+        manager.setDifficultyMultiplier(multiplier);
+        return manager;
+    }
+
+    public PlantSelectionWindow(String tile, Skin skin, OnPlantChosenListener chosenListener, Player player, DifficultyManager difficultyManager){
         super(tile, skin);
         this.chosenListener = chosenListener;
+        this.difficultyManager = difficultyManager;
 
         this.setModal(true);
         this.setMovable(true);
@@ -40,8 +57,11 @@ public class PlantSelectionWindow extends Window {
             Image colorBox = new Image(new Texture(pixmap));
             pixmap.dispose();
 
+            int adjustedCost = (int)(type.getSeedPrice() / difficultyManager.getMoneyMultiplier());
+            int adjustedSellPrice = (int)(type.getSellPrice() / difficultyManager.getMoneyMultiplier());
+            float adjustedGrowthTime = type.getGrowthTime() * difficultyManager.getTimeMultiplier();
             String infoText = String.format("%s\nKoszt: %d $ | Sprzedaż: %d $\nCzas wzrostu: %.1fs",
-                type.getName(), type.getSeedPrice(), type.getSellPrice(), type.getGrowthTime());
+                type.getName(), adjustedCost, adjustedSellPrice, adjustedGrowthTime);
             Label plantInfoLabel = new Label(infoText, skin);
             plantInfoLabel.setWrap(true);
 

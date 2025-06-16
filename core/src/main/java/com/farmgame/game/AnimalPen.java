@@ -13,12 +13,18 @@ public class AnimalPen {
 
     private State state;
     private Animal currentAnimal;
+    private DifficultyManager difficultyManager;
 
     public AnimalPen(int x, int y) {
+        this(x, y, new DifficultyManager());
+    }
+
+    public AnimalPen(int x, int y, DifficultyManager difficultyManager) {
         this.x = x;
         this.y = y;
         this.state = State.BLOCKED;
         this.currentAnimal = null;
+        this.difficultyManager = difficultyManager;
     }
 
     public State getState() {
@@ -43,10 +49,24 @@ public class AnimalPen {
 
 
     public boolean placeAnimal(Animal animal, Player player){
+        return placeAnimal(animal, player, this.difficultyManager);
+    }
+
+    public boolean placeAnimal(Animal animal, Player player, float difficultyMultiplier){
+        DifficultyManager tempManager = new DifficultyManager();
+        tempManager.setDifficultyMultiplier(difficultyMultiplier);
+        return placeAnimal(animal, player, tempManager);
+    }
+
+    public boolean placeAnimal(Animal animal, Player player, DifficultyManager difficultyManager){
         if(state == State.EMPTY){
-            this.currentAnimal = animal;
+            Animal animalWithDifficulty = new Animal(animal.getType(), difficultyManager);
+
+            this.currentAnimal = animalWithDifficulty;
             this.state = State.OCCUPIED;
-            player.addMoney(-animal.getType().getCost());
+
+            int adjustedCost = (int)(animal.getType().getCost() / difficultyManager.getMoneyMultiplier());
+            player.addMoney(-adjustedCost);
             player.addExp(5);
             return true;
         } else {
@@ -66,6 +86,14 @@ public class AnimalPen {
         if(currentAnimal != null){
             currentAnimal.update(delta);
         }
+   }
+
+   public DifficultyManager getDifficultyManager() {
+        return difficultyManager;
+   }
+
+   public void setDifficultyManager(DifficultyManager difficultyManager) {
+        this.difficultyManager = difficultyManager;
    }
 
     public void setCurrentAnimal(Animal animal) {
@@ -88,4 +116,3 @@ public class AnimalPen {
         return y;
     }
 }
-

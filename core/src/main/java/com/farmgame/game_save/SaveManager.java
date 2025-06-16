@@ -12,10 +12,17 @@ import com.farmgame.player.Player;
 import java.util.ArrayList;
 
 public class SaveManager {
-    private static final String SAVE_FILE = "farmgame_save.json";
+    private static final String SAVE_FILE_TEMPLATE = "farmgame_save_%d.json";
+    private static final int MAX_SAVE_SLOTS = 5;
     private Json json;
+    private DifficultyManager difficultyManager;
 
     public SaveManager() {
+        this(new DifficultyManager());
+    }
+
+    public SaveManager(DifficultyManager difficultyManager) {
+        this.difficultyManager = difficultyManager;
         json = new Json();
         json.setOutputType(JsonWriter.OutputType.json);
     }
@@ -150,16 +157,44 @@ public class SaveManager {
         );
     }
 
+    public float getDifficultyMultiplier() {
+        return difficultyManager.getDifficultyMultiplier();
+    }
+
+    public void setDifficultyMultiplier(float multiplier) {
+        difficultyManager.setDifficultyMultiplier(multiplier);
+    }
+
+    public DifficultyManager getDifficultyManager() {
+        return difficultyManager;
+    }
+
+    private String getSaveFileName(int slot) {
+        return String.format(SAVE_FILE_TEMPLATE, slot);
+    }
+
     // Zapisywanie stanu gry
     public void saveGame(Player player, Farm farm, GameClock gameClock,
                          Weather weather, PlantType selectedPlant, String currentAction) {
+        saveGame(player, farm, gameClock, weather, selectedPlant, currentAction, 1); // Default to slot 1
+    }
+
+    public void saveGame(Player player, Farm farm, GameClock gameClock,
+                         Weather weather, PlantType selectedPlant, String currentAction, int slot) {
         try {
+            if (slot < 1 || slot > MAX_SAVE_SLOTS) {
+                slot = 1;
+            }
+
             GameState gameState = convertToSaveState(player, farm, gameClock,
                 weather, selectedPlant, currentAction);
+
+            gameState.difficultyMultiplier = difficultyManager.getDifficultyMultiplier();
+
             String jsonString = json.toJson(gameState);
-            FileHandle file = Gdx.files.local(SAVE_FILE);
+            FileHandle file = Gdx.files.local(getSaveFileName(slot));
             file.writeString(jsonString, false);
-            Gdx.app.log("SaveManager", "Gra zapisana pomyślnie");
+            Gdx.app.log("SaveManager", "Gra zapisana pomyślnie w slocie " + slot);
         } catch (Exception e) {
             Gdx.app.error("SaveManager", "Błąd podczas zapisywania: " + e.getMessage());
             e.printStackTrace();
@@ -168,15 +203,28 @@ public class SaveManager {
 
     // Odczytywanie stanu gry
     public GameState loadGame() {
+        return loadGame(1);
+    }
+
+    public GameState loadGame(int slot) {
         try {
-            FileHandle file = Gdx.files.local(SAVE_FILE);
+            if (slot < 1 || slot > MAX_SAVE_SLOTS) {
+                slot = 1;
+            }
+
+            FileHandle file = Gdx.files.local(getSaveFileName(slot));
             if (file.exists()) {
                 String jsonString = file.readString();
                 GameState gameState = json.fromJson(GameState.class, jsonString);
-                Gdx.app.log("SaveManager", "Gra wczytana pomyślnie");
+
+                if (gameState.difficultyMultiplier > 0) {
+                    difficultyManager.setDifficultyMultiplier(gameState.difficultyMultiplier);
+                }
+
+                Gdx.app.log("SaveManager", "Gra wczytana pomyślnie ze slotu " + slot);
                 return gameState;
             } else {
-                Gdx.app.log("SaveManager", "Plik zapisu nie istnieje, tworzę nowy stan gry");
+                Gdx.app.log("SaveManager", "Plik zapisu nie istnieje w slocie " + slot + ", tworzę nowy stan gry");
                 return null; // Zwróć null jeśli nie ma zapisu
             }
         } catch (Exception e) {
@@ -308,16 +356,30 @@ public class SaveManager {
     }
 
     public boolean saveExists() {
-        FileHandle file = Gdx.files.local(SAVE_FILE);
+        return saveExists(1);
+    }
+
+    public boolean saveExists(int slot) {
+        if (slot < 1 || slot > MAX_SAVE_SLOTS) {
+            slot = 1;
+        }
+        FileHandle file = Gdx.files.local(getSaveFileName(slot));
         return file.exists();
     }
 
     public void deleteSave() {
+        deleteSave(1);
+    }
+
+    public void deleteSave(int slot) {
         try {
-            FileHandle file = Gdx.files.local(SAVE_FILE);
+            if (slot < 1 || slot > MAX_SAVE_SLOTS) {
+                slot = 1;
+            }
+            FileHandle file = Gdx.files.local(getSaveFileName(slot));
             if (file.exists()) {
                 file.delete();
-                Gdx.app.log("SaveManager", "Zapis usunięty");
+                Gdx.app.log("SaveManager", "Zapis usunięty ze slotu " + slot);
             }
         } catch (Exception e) {
             Gdx.app.error("SaveManager", "Błąd podczas usuwania zapisu: " + e.getMessage());

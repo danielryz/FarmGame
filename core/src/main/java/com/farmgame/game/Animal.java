@@ -9,12 +9,18 @@ public class Animal {
     private final AnimalType type;
     private ProductState productState;
     private float timeToNextProduct;
+    private DifficultyManager difficultyManager;
 
 
     public Animal(AnimalType type) {
+        this(type, new DifficultyManager());
+    }
+
+    public Animal(AnimalType type, DifficultyManager difficultyManager) {
         this.type = type;
         this.timeToNextProduct = 0f;
         this.productState = ProductState.NOT_FED;
+        this.difficultyManager = difficultyManager;
     }
 
     public void update(float delta){
@@ -35,7 +41,7 @@ public class Animal {
 
         if (type.getFeedSet().contains(plantName)) {
             productState = ProductState.PRODUCTION;
-            timeToNextProduct = type.getProductTime();
+            timeToNextProduct = type.getProductTime() * difficultyManager.getTimeMultiplier();
             System.out.println("Nakarmiono zwierzę rośliną: " + plantName);
             return true;
         }

@@ -11,6 +11,15 @@ public class Plot {
 
     private State state = State.BLOCKED;
     private Plant plant;
+    private DifficultyManager difficultyManager;
+
+    public Plot() {
+        this(new DifficultyManager());
+    }
+
+    public Plot(DifficultyManager difficultyManager) {
+        this.difficultyManager = difficultyManager;
+    }
 
     public State getState() {
         return state;
@@ -23,6 +32,13 @@ public class Plot {
     public void plant(Plant plant) {
         if (state == State.EMPTY) {
             this.plant = plant;
+            this.state = State.PLANTED;
+        }
+    }
+
+    public void plant(PlantType plantType) {
+        if (state == State.EMPTY) {
+            this.plant = new Plant(plantType, difficultyManager);
             this.state = State.PLANTED;
         }
     }
