@@ -18,7 +18,7 @@ public class Player {
 
     public Player(String name) {
         this.name = name;
-        this.money = 999;
+        this.money = 1000;
         this.level = 1;
         this.exp = 0;
         this.expToNextLevel = 10;

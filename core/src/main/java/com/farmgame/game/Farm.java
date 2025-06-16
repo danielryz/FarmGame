@@ -16,10 +16,17 @@ public class Farm {
     private final float BASE_PEN_PRICE = 100;
     private final float MULTIPLIER_PEN = 1.5f;
 
+    private DifficultyManager difficultyManager;
+
 
     public Farm(int width, int height, int penWidth, int penHeight) {
+        this(width, height, penWidth, penHeight, new DifficultyManager());
+    }
+
+    public Farm(int width, int height, int penWidth, int penHeight, DifficultyManager difficultyManager) {
         this.width = width;
         this.height = height;
+        this.difficultyManager = difficultyManager;
 
         this.penWidth = penWidth;
         this.penHeight = penHeight;
@@ -29,7 +36,7 @@ public class Farm {
         plots = new Plot[width][height];
         for (int x = 0; x < width; x++) {
             for (int y = 0; y < height; y++) {
-                plots[x][y] = new Plot();
+                plots[x][y] = new Plot(difficultyManager);
                 plotPrices[x][y] = (int) ( BASE_PLOT_PRICE * MULTIPLIER_PLOT * (x + y));
             }
         }
@@ -38,7 +45,7 @@ public class Farm {
         animalPens = new AnimalPen[penWidth][penHeight];
         for (int x = 0; x < penWidth; x++) {
             for (int y = 0; y < penHeight; y++) {
-                animalPens[x][y] = new AnimalPen(x, y);
+                animalPens[x][y] = new AnimalPen(x, y, difficultyManager);
                 penPrices[x][y] = (int) (BASE_PEN_PRICE * MULTIPLIER_PEN * (x + y));
             }
         }
@@ -53,7 +60,26 @@ public class Farm {
     }
 
     public int getPlotPrice(int x, int y) {
-        return plotPrices[x][y];
+        return (int)(plotPrices[x][y] / difficultyManager.getMoneyMultiplier());
+    }
+
+    public void setDifficultyMultiplier(float multiplier) {
+        if (difficultyManager == null) {
+            difficultyManager = new DifficultyManager();
+        }
+        difficultyManager.setDifficultyMultiplier(multiplier);
+    }
+
+    public float getDifficultyMultiplier() {
+        return difficultyManager.getDifficultyMultiplier();
+    }
+
+    public DifficultyManager getDifficultyManager() {
+        return difficultyManager;
+    }
+
+    public void setDifficultyManager(DifficultyManager difficultyManager) {
+        this.difficultyManager = difficultyManager;
     }
 
     public int getWidth() {
@@ -73,7 +99,7 @@ public class Farm {
     }
 
     public int getPenPrice(int x, int y) {
-        return penPrices[x][y];
+        return (int)(penPrices[x][y] / difficultyManager.getMoneyMultiplier());
     }
 
     public int getPenWidth() {

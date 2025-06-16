@@ -15,11 +15,27 @@ public class AnimalSelectionWindow extends Window {
 
     private final Runnable onBuyCallback;
     private final Player player;
+    private final DifficultyManager difficultyManager;
 
     public AnimalSelectionWindow(String tile, Skin skin, Player player, AnimalPen animalPen, Runnable onBuyCallback){
+        this(tile, skin, player, animalPen, onBuyCallback, new DifficultyManager());
+    }
+
+    public AnimalSelectionWindow(String tile, Skin skin, Player player, AnimalPen animalPen, Runnable onBuyCallback, float difficultyMultiplier){
+        this(tile, skin, player, animalPen, onBuyCallback, createDifficultyManager(difficultyMultiplier));
+    }
+
+    private static DifficultyManager createDifficultyManager(float multiplier) {
+        DifficultyManager manager = new DifficultyManager();
+        manager.setDifficultyMultiplier(multiplier);
+        return manager;
+    }
+
+    public AnimalSelectionWindow(String tile, Skin skin, Player player, AnimalPen animalPen, Runnable onBuyCallback, DifficultyManager difficultyManager){
         super(tile, skin);
         this.player = player;
         this.onBuyCallback = onBuyCallback;
+        this.difficultyManager = difficultyManager;
 
         this.setModal(true);
         this.setMovable(true);
@@ -41,8 +57,11 @@ public class AnimalSelectionWindow extends Window {
 
             Image colorBox = new Image(texture);
 
+            int adjustedCost = (int)(type.getCost() / difficultyManager.getMoneyMultiplier());
+            int adjustedSellPrice = (int)(type.getSellPrice() / difficultyManager.getMoneyMultiplier());
+            float adjustedProductTime = type.getProductTime() * difficultyManager.getTimeMultiplier();
             String infoText = String.format("%s\nKoszt: %d\nCzas produkcji %s: %.1fs\nZysk ze sprzedaży %s: %d",
-                type.getName(), type.getCost(), type.getProductName(),type.getProductTime(), type.getProductName(), type.getSellPrice());
+                type.getName(), adjustedCost, type.getProductName(), adjustedProductTime, type.getProductName(), adjustedSellPrice);
 
             Label animalInfoLabel = new Label(infoText, skin);
             animalInfoLabel.setWrap(true);
@@ -82,9 +101,10 @@ public class AnimalSelectionWindow extends Window {
                     @Override
                     public void changed(ChangeEvent event, Actor actor) {
                         if (animalPen.getState() == AnimalPen.State.EMPTY) {
-                            if (player.getMoney() >= type.getCost()) {
-                                Animal newAnimal = new Animal(type);
-                                animalPen.placeAnimal(newAnimal, player);
+                            int adjustedCost = (int)(type.getCost() / difficultyManager.getMoneyMultiplier());
+                            if (player.getMoney() >= adjustedCost) {
+                                Animal newAnimal = new Animal(type, difficultyManager);
+                                animalPen.placeAnimal(newAnimal, player, difficultyManager);
 
                                 if (onBuyCallback != null) {
                                     onBuyCallback.run();

@@ -4,11 +4,17 @@ public class Plant {
     private final PlantType type;
     private float currentGrowthTime;
     private boolean watered;
+    private DifficultyManager difficultyManager;
 
     public Plant(PlantType type) {
+        this(type, new DifficultyManager());
+    }
+
+    public Plant(PlantType type, DifficultyManager difficultyManager) {
         this.type = type;
         this.currentGrowthTime = 0f;
         this.watered = false;
+        this.difficultyManager = difficultyManager;
     }
 
     public void water(){
@@ -21,8 +27,10 @@ public class Plant {
 
     public void update(float delta){
         if (currentGrowthTime < type.getGrowthTime()){
-            float speedMultiplier = watered ? 1.5f : 1.0f;
-            currentGrowthTime += delta * speedMultiplier;
+            float wateringMultiplier = watered ? 1.5f : 1.0f;
+
+            currentGrowthTime += delta * wateringMultiplier;
+
             if (currentGrowthTime > type.getGrowthTime()){
                 currentGrowthTime = type.getGrowthTime();
             }
@@ -34,7 +42,8 @@ public class Plant {
     }
 
     public boolean isReadyToHarvest(){
-        return currentGrowthTime >= type.getGrowthTime();
+        float adjustedGrowthTime = type.getGrowthTime() * difficultyManager.getTimeMultiplier();
+        return currentGrowthTime >= adjustedGrowthTime;
     }
 
     public String getPlantName() {
@@ -46,11 +55,13 @@ public class Plant {
     }
 
     public float getGrowthPercent() {
-        return currentGrowthTime / type.getGrowthTime();
+        float adjustedGrowthTime = type.getGrowthTime() * difficultyManager.getTimeMultiplier();
+        return currentGrowthTime / adjustedGrowthTime;
     }
 
     public float getTimeRemaining() {
-        return Math.max(0, type.getGrowthTime() - currentGrowthTime);
+        float adjustedGrowthTime = type.getGrowthTime() * difficultyManager.getTimeMultiplier();
+        return Math.max(0, adjustedGrowthTime - currentGrowthTime);
     }
 
     public void setTimeRemaining(float timeRemaining) {
