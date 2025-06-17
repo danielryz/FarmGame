@@ -16,6 +16,7 @@ public class PenUpgradeWindow extends Window {
         this.setModal(true);
         this.setMovable(true);
         this.setKeepWithinStage(true);
+        this.setSize(300, 200);
 
         int nextCapacity = pen.getCapacity() + 1;
         int upgradeCost = BASE_UPGRADE_COST * pen.getCapacity();
@@ -65,11 +66,10 @@ public class PenUpgradeWindow extends Window {
         });
 
         Table table = new Table();
-        table.add(infoLabel).colspan(2).pad(10).row();
+        table.add(infoLabel).growX().pad(10).row();
         table.add(upgradeButton).pad(10);
         table.add(cancelButton).pad(10);
 
         this.add(table).expand().fill();
-        this.pack();
     }
 }

@@ -81,6 +81,7 @@ public class SaveManager {
         savedFarm.height = farm.getHeight();
         savedFarm.penWidth = farm.getPenWidth();
         savedFarm.penHeight = farm.getPenHeight();
+        savedFarm.hasWateringSystem = farm.hasWateringSystem();
 
         // Konwertuj działki
         savedFarm.plots = new SavedPlot[farm.getWidth()][farm.getHeight()];
@@ -95,7 +96,9 @@ public class SaveManager {
                             plant.getType().getName(),
                             plant.getTimeRemaining(),
                             plant.isWatered(),
-                            colorToHex(plant.getType().getColor())
+                                colorToHex(plant.getType().getColor()),
+                                plant.isAutoWatered(),
+                                plant.getFertilizerTimeRemaining()
                         );
                     }
 
@@ -285,6 +288,10 @@ public class SaveManager {
                                         Plant plant = new Plant(plantType);
                                         plant.setTimeRemaining(savedPlot.plant.timeRemaining);
                                         plant.setWatered(savedPlot.plant.isWatered);
+                                        plant.setAutoWatered(savedPlot.plant.isAutoWatered);
+                                        if (savedPlot.plant.fertilizerTime > 0f) {
+                                            plant.applyFertilizer(savedPlot.plant.fertilizerTime);
+                                        }
                                         plot.plant(plant);
 
                                         // Ustaw stan działki
@@ -325,9 +332,11 @@ public class SaveManager {
                                     }
                                     pen.setAnimals(animals);
                                     pen.setState(AnimalPen.State.valueOf(savedPen.state));
-                                    }
                                 }
                             }
+
+                            farm.setWateringSystem(gameState.farm.hasWateringSystem);
+                        }
                         }
                     }
                 }

@@ -45,12 +45,16 @@ public class GameScreen implements Screen {
     private final TextButton waterButton;
     private final TextButton harvestButton;
     private final TextButton feedButton;
+    private final TextButton fertilizeButton;
+    private final TextButton buyFertilizerButton;
+    private final TextButton buyWateringButton;
     private InventorySellWindow currentInventoryWindow = null;
     private enum Action {
         PLANT,
         WATER,
         HARVEST,
-        FEED
+        FEED,
+        FERTILIZE
     }
     private Action currentAction = Action.PLANT;
     private final Label moneyLabel;
@@ -207,12 +211,22 @@ public class GameScreen implements Screen {
         feedButton = new TextButton("Nakarm", skin);
         waterButton = new TextButton("Podlej", skin);
         harvestButton = new TextButton("Zbierz", skin);
+        fertilizeButton = new TextButton("Nawóz", skin);
+        buyFertilizerButton = new TextButton("Kup nawóz (20$)", skin);
+        buyWateringButton = new TextButton("Kup nawadnianie (5000$)", skin);
+
+        if (farm.hasWateringSystem()){
+            waterButton.setDisabled(true);
+        }
         TextButton sellAllButton = getSellAllButton();
 
         sidebar.add(sellAllButton).expandX().fillX().padTop(10).row();
         sidebar.add(feedButton).expandX().fillX().row();
         sidebar.add(waterButton).expandX().fillX().row();
         sidebar.add(harvestButton).expandX().fillX().row();
+        sidebar.add(fertilizeButton).expandX().fillX().row();
+        sidebar.add(buyFertilizerButton).expandX().fillX().row();
+        sidebar.add(buyWateringButton).expandX().fillX().row();
         sidebar.add(saveButton).expandX().fillX().padTop(10).row();
         sidebar.add(loadButton).expandX().fillX().padTop(10).row();
 
@@ -249,6 +263,58 @@ public class GameScreen implements Screen {
                 selectedButton = harvestButton;
                 harvestButton.setColor(Color.CYAN);
                 waterButton.setColor(Color.WHITE);
+            }
+        });
+
+        fertilizeButton.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                currentAction = Action.FERTILIZE;
+                if (selectedButton != null) selectedButton.setColor(Color.WHITE);
+                selectedButton = fertilizeButton;
+                fertilizeButton.setColor(Color.CYAN);
+                waterButton.setColor(Color.WHITE);
+                harvestButton.setColor(Color.WHITE);
+                feedButton.setColor(Color.WHITE);
+            }
+        });
+
+        buyFertilizerButton.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                int cost = 20;
+                if (player.getMoney() >= cost) {
+                    player.addMoney(-cost);
+                    player.getPlayerInventory().addItem(new InventoryItem("Fertilizer", 1, 0));
+                    updatePlayerStatus();
+                    MessageManager.info("Kupiono nawóz");
+                } else {
+                    MessageManager.warning("Za mało pieniędzy na nawóz!");
+                }
+            }
+        });
+
+        buyWateringButton.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                int cost = 5000;
+                if (farm.hasWateringSystem()) {
+                    MessageManager.info("System nawadniania już aktywny");
+                    return;
+                }
+                if (player.getMoney() >= cost) {
+                    player.addMoney(-cost);
+                    farm.purchaseWateringSystem();
+                    waterButton.setDisabled(true);
+                    if (currentAction == Action.WATER) {
+                        currentAction = Action.PLANT;
+                        waterButton.setColor(Color.WHITE);
+                    }
+                    updatePlayerStatus();
+                    MessageManager.info("Zakupiono system nawadniania");
+                } else {
+                    MessageManager.warning("Za mało pieniędzy na system nawadniania!");
+                }
             }
         });
 
@@ -305,7 +371,7 @@ public class GameScreen implements Screen {
             // Obsługa kliknij i przytrzymaj
             @Override
             public boolean touchDragged(int screenX, int screenY, int pointer) {
-                if (!isDragging || (currentAction != Action.PLANT && currentAction != Action.HARVEST && currentAction != Action.WATER)) {
+                if (!isDragging || (currentAction != Action.PLANT && currentAction != Action.HARVEST && currentAction != Action.WATER && currentAction != Action.FERTILIZE)) {
                     return false;
                 }
 
@@ -343,6 +409,7 @@ public class GameScreen implements Screen {
                 case WATER -> "WATER";
                 case HARVEST -> "HARVEST";
                 case FEED -> "FEED";
+                case FERTILIZE -> "FERTILIZE";
             };
 
             saveManager.saveGame(player, farm, gameClock, weather, selectedPlant, currentActionStr, currentSaveSlot);
@@ -581,6 +648,10 @@ public class GameScreen implements Screen {
                 }
             }
             case WATER -> {
+                if (farm.hasWateringSystem()){
+                    MessageManager.info("System nawadniania jest aktywny");
+                    break;
+                }
                 Plant plant = plot.getPlant();
                 if (plant != null &&
                     !plant.isWatered() &&
@@ -611,6 +682,22 @@ public class GameScreen implements Screen {
                     updatePlayerStatus();
                 }
             }
+            case FERTILIZE -> {
+                if (plot.getPlant() != null && plot.getState() != Plot.State.READY_TO_HARVEST) {
+                    if (player.getPlayerInventory().getQuantity("Fertilizer") > 0) {
+                        plot.applyFertilizer(30f);
+                        player.getPlayerInventory().removeItem("Fertilizer", 1);
+                        player.addExp(1);
+                        updatePlayerStatus();
+                        MessageManager.info("Zastosowano nawóz");
+                        if (currentInventoryWindow != null && currentInventoryWindow.getStage() != null) {
+                            currentInventoryWindow.refreshInventory();
+                        }
+                    } else {
+                        MessageManager.warning("Brak nawozu!");
+                    }
+                }
+            }
         }
     }
 
@@ -632,7 +719,7 @@ public class GameScreen implements Screen {
 
         if (!pen.isBlocked()) {
             if (!pen.isFull()) {
-                if (currentAction == Action.FEED || currentAction == Action.PLANT || currentAction == Action.WATER || currentAction == Action.HARVEST) {
+                if (currentAction == Action.FEED || currentAction == Action.PLANT || currentAction == Action.WATER || currentAction == Action.HARVEST || currentAction == Action.FERTILIZE) {
                     AnimalSelectionWindow animalSelectionWindow = new AnimalSelectionWindow(
                             "Kup zwierzę", skin, player, pen, () -> updatePlayerStatus(), saveManager.getDifficultyManager()
                     );
@@ -905,13 +992,23 @@ public class GameScreen implements Screen {
                     shapeRenderer.rect(centerX, centerY, size, size);
 
                     // Kropla wody
-                    if (plant.isWatered()) {
+                    if (plant.isWatered() || plant.isAutoWatered()) {
                         float waterSize = TILE_SIZE / 4f;
                         float waterX = x * TILE_SIZE + X_OFFSET + TILE_SIZE - waterSize - 4;
                         float waterY = y * TILE_SIZE + Y_OFFSET + 4;
 
                         shapeRenderer.setColor(Color.CYAN);
                         shapeRenderer.rect(waterX, waterY, waterSize, waterSize);
+                    }
+
+                    // Ikona nawozu
+                    if (plant.getFertilizerTimer() > 0f) {
+                        float fertSize = TILE_SIZE / 4f;
+                        float fertX = x * TILE_SIZE + X_OFFSET + 4;
+                        float fertY = y * TILE_SIZE + Y_OFFSET + TILE_SIZE - fertSize - 4;
+
+                        shapeRenderer.setColor(Color.MAGENTA);
+                        shapeRenderer.rect(fertX, fertY, fertSize, fertSize);
                     }
                 }
             }
