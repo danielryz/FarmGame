@@ -74,6 +74,13 @@ public class Plot {
         }
     }
 
+    public void destroyPlant() {
+        if (plant != null) {
+            plant = null;
+            state = State.EMPTY;
+        }
+    }
+
     public void setState(State state) {
         this.state = state;
     }
