@@ -15,6 +15,8 @@ public class Farm {
     private final float MULTIPLIER_PLOT = 1.2f;
     private final float BASE_PEN_PRICE = 100;
     private final float MULTIPLIER_PEN = 1.5f;
+    private final int BASE_PEN_CAPACITY = 1;
+    private final int PEN_CAPACITY_STEP = 1;
 
     private DifficultyManager difficultyManager;
 
@@ -46,6 +48,7 @@ public class Farm {
         for (int x = 0; x < penWidth; x++) {
             for (int y = 0; y < penHeight; y++) {
                 animalPens[x][y] = new AnimalPen(x, y, difficultyManager);
+                animalPens[x][y].setCapacity(BASE_PEN_CAPACITY);
                 penPrices[x][y] = (int) (BASE_PEN_PRICE * MULTIPLIER_PEN * (x + y));
             }
         }
@@ -113,5 +116,13 @@ public class Farm {
     public boolean inPenRange(int x, int y) {
         return (x >= 0 && x < penWidth && y >= 0 && y < penHeight);
     }
+
+    public void upgradePenCapacity(int x, int y) {
+        AnimalPen pen = getAnimalPen(x, y);
+        if (pen != null) {
+            pen.increaseCapacity();
+        }
+    }
+
 
 }

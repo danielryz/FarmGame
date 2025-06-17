@@ -100,7 +100,11 @@ public class AnimalSelectionWindow extends Window {
                 buyButton.addListener(new ChangeListener() {
                     @Override
                     public void changed(ChangeEvent event, Actor actor) {
-                        if (animalPen.getState() == AnimalPen.State.EMPTY) {
+                        if (!animalPen.isFull()) {
+                            if (!animalPen.canAcceptType(type)) {
+                                MessageManager.warning("Zagroda przyjmuje tylko: " + animalPen.getAllowedType().getName());
+                                return;
+                            }
                             int adjustedCost = (int)(type.getCost() / difficultyManager.getMoneyMultiplier());
                             if (player.getMoney() >= adjustedCost) {
                                 Animal newAnimal = new Animal(type, difficultyManager);
@@ -115,7 +119,7 @@ public class AnimalSelectionWindow extends Window {
                                 MessageManager.warning("Za mało pieniędzy na kupno: " + type.getName());
                             }
                         } else {
-                            MessageManager.warning("Zagroda jest już zajęta!");
+                            MessageManager.warning("Zagroda jest pełna!");
                         }
                     }
                 });

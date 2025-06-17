@@ -10,6 +10,7 @@ import com.farmgame.player.InventoryItem;
 import com.farmgame.player.Player;
 
 import java.util.ArrayList;
+import java.util.List;
 
 public class SaveManager {
     private static final String SAVE_FILE_TEMPLATE = "farmgame_save_%d.json";
@@ -113,21 +114,22 @@ public class SaveManager {
             for (int py = 0; py < farm.getPenHeight(); py++) {
                 AnimalPen pen = farm.getAnimalPen(px, py);
                 if (pen != null) {
-                    SavedAnimal savedAnimal = null;
-                    if (pen.getCurrentAnimal() != null) {
-                        Animal animal = pen.getCurrentAnimal();
-                        savedAnimal = new SavedAnimal(
-                            animal.getType().getName(),
-                            animal.getProductState().name(),
-                            animal.getTimeToNextProduct(),
-                            colorToHex(animal.getType().getColor())
-                        );
+                    List<SavedAnimal> savedAnimals = new ArrayList<>();
+                    for (Animal animal : pen.getAnimals()) {
+                        savedAnimals.add(new SavedAnimal(
+                                animal.getType().getName(),
+                                animal.getProductState().name(),
+                                animal.getTimeToNextProduct(),
+                                colorToHex(animal.getType().getColor())
+                        ));
                     }
+
 
                     savedFarm.animalPens[px][py] = new Weather.SavedAnimalPen(
                         pen.isBlocked(),
                         pen.getState().name(),
-                        savedAnimal
+                            pen.getCapacity(),
+                            savedAnimals.toArray(new SavedAnimal[0])
                     );
                 }
             }
@@ -308,22 +310,27 @@ public class SaveManager {
                                     pen.unlock();
                                 }
 
-                                // Przywróć zwierzę, jeśli istnieje
-                                if (savedPen.currentAnimal != null) {
-                                    AnimalType animalType = findAnimalTypeByName(savedPen.currentAnimal.typeName);
-                                    if (animalType != null) {
-                                        Animal animal = new Animal(animalType);
-                                        animal.setProductState(Animal.ProductState.valueOf(savedPen.currentAnimal.productState));
-                                        animal.setTimeToNextProduct(savedPen.currentAnimal.timeToNextProduct);
-                                        pen.setCurrentAnimal(animal);
-                                        pen.setState(AnimalPen.State.valueOf(savedPen.state));
+                                pen.setCapacity(savedPen.capacity);
+
+                                if (savedPen.animals != null) {
+                                    List<Animal> animals = new ArrayList<>();
+                                    for (SavedAnimal savedAnimal : savedPen.animals) {
+                                        AnimalType animalType = findAnimalTypeByName(savedAnimal.typeName);
+                                        if (animalType != null) {
+                                            Animal animal = new Animal(animalType);
+                                            animal.setProductState(Animal.ProductState.valueOf(savedAnimal.productState));
+                                            animal.setTimeToNextProduct(savedAnimal.timeToNextProduct);
+                                            animals.add(animal);
+                                        }
+                                    }
+                                    pen.setAnimals(animals);
+                                    pen.setState(AnimalPen.State.valueOf(savedPen.state));
                                     }
                                 }
                             }
                         }
                     }
                 }
-            }
 
             // Przywróć zegar gry
             if (gameState.gameClock != null) {

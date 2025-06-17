@@ -104,14 +104,16 @@ public class Weather {
     public static class SavedAnimalPen {
         public boolean isBlocked;
         public String state; // BLOCKED, EMPTY, OCCUPIED
-        public SavedAnimal currentAnimal;
+        public int capacity;
+        public SavedAnimal[] animals;
 
         public SavedAnimalPen() {}
 
-        public SavedAnimalPen(boolean isBlocked, String state, SavedAnimal currentAnimal) {
+        public SavedAnimalPen(boolean isBlocked, String state, int capacity, SavedAnimal[] animals) {
             this.isBlocked = isBlocked;
             this.state = state;
-            this.currentAnimal = currentAnimal;
+            this.capacity = capacity;
+            this.animals = animals;
         }
     }
 }

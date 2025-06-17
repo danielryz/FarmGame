@@ -1,6 +1,9 @@
 package com.farmgame.game;
 
 import com.farmgame.player.Player;
+import com.farmgame.game.AnimalType;
+import java.util.ArrayList;
+import java.util.List;
 
 public class AnimalPen {
 
@@ -12,7 +15,10 @@ public class AnimalPen {
     private final int y;
 
     private State state;
-    private Animal currentAnimal;
+    private List<Animal> animals;
+    private int capacity = 1;
+    private static final int MAX_CAPACITY = 9;
+    private AnimalType allowedType = null;
     private DifficultyManager difficultyManager;
 
     public AnimalPen(int x, int y) {
@@ -23,7 +29,8 @@ public class AnimalPen {
         this.x = x;
         this.y = y;
         this.state = State.BLOCKED;
-        this.currentAnimal = null;
+        this.animals = new ArrayList<>();
+        this.allowedType = null;
         this.difficultyManager = difficultyManager;
     }
 
@@ -31,8 +38,8 @@ public class AnimalPen {
         return state;
     }
 
-    public Animal getCurrentAnimal() {
-        return currentAnimal;
+    public List<Animal> getAnimals() {
+        return animals;
     }
 
     public void unlock() {
@@ -59,45 +66,87 @@ public class AnimalPen {
     }
 
     public boolean placeAnimal(Animal animal, Player player, DifficultyManager difficultyManager){
-        if(state == State.EMPTY){
-            Animal animalWithDifficulty = new Animal(animal.getType(), difficultyManager);
-
-            this.currentAnimal = animalWithDifficulty;
-            this.state = State.OCCUPIED;
-
-            int adjustedCost = (int)(animal.getType().getCost() / difficultyManager.getMoneyMultiplier());
-            player.addMoney(-adjustedCost);
-            player.addExp(5);
-            return true;
-        } else {
-            System.out.println("Zagroda jest zajęta!");
+        if (isBlocked() || isFull()) {
+            System.out.println("Zagroda jest pełna!");
             return false;
         }
-   }
 
-   public void removeAnimal(){
-        if (state == State.OCCUPIED) {
-            this.currentAnimal = null;
+        if (allowedType != null && !allowedType.equals(animal.getType())) {
+            System.out.println("Ta zagroda przyjmuje tylko zwierzęta typu: " + allowedType.getName());
+            return false;
+        }
+
+        Animal animalWithDifficulty = new Animal(animal.getType(), difficultyManager);
+        this.animals.add(animalWithDifficulty);
+        this.allowedType = animal.getType();
+        this.state = State.OCCUPIED;
+
+        int adjustedCost = (int)(animal.getType().getCost() / difficultyManager.getMoneyMultiplier());
+        player.addMoney(-adjustedCost);
+        player.addExp(5);
+        return true;
+    }
+
+    public void removeAnimal(Animal animal){
+        if (animals.remove(animal) && animals.isEmpty()) {
             this.state = State.EMPTY;
+            this.allowedType = null;
         }
-   }
+    }
 
-   public void update(float delta){
-        if(currentAnimal != null){
-            currentAnimal.update(delta);
+    public void update(float delta){
+        for (Animal animal : animals) {
+            animal.update(delta);
         }
-   }
+    }
 
-   public DifficultyManager getDifficultyManager() {
+    public DifficultyManager getDifficultyManager() {
         return difficultyManager;
-   }
+    }
 
-   public void setDifficultyManager(DifficultyManager difficultyManager) {
+    public void setDifficultyManager(DifficultyManager difficultyManager) {
         this.difficultyManager = difficultyManager;
-   }
+    }
 
-    public void setCurrentAnimal(Animal animal) {
-        this.currentAnimal = animal;
+    public int getCapacity() {
+        return capacity;
+    }
+
+    public void setCapacity(int capacity) {
+        this.capacity = capacity;
+    }
+
+    public void increaseCapacity() {
+        if (this.capacity < MAX_CAPACITY) {
+            this.capacity++;
+        }
+    }
+
+    public boolean isMaxCapacity() {
+        return capacity >= MAX_CAPACITY;
+    }
+
+    public AnimalType getAllowedType() {
+        return allowedType;
+    }
+
+    public boolean canAcceptType(AnimalType type) {
+        return allowedType == null || allowedType.equals(type);
+    }
+
+    public boolean isFull() {
+        return animals.size() >= capacity;
+    }
+
+    public void setAnimals(List<Animal> animals) {
+        this.animals = new ArrayList<>(animals);
+        if (this.animals.isEmpty()) {
+            this.state = State.EMPTY;
+            this.allowedType = null;
+        } else {
+            this.state = State.OCCUPIED;
+            this.allowedType = this.animals.get(0).getType();
+        }
     }
 
     public void setState(State state) {
@@ -106,9 +155,9 @@ public class AnimalPen {
 
     public boolean isBlocked(){
         return state == State.BLOCKED;
-   }
+    }
 
-   public int getX() {
+    public int getX() {
         return x;
     }
 

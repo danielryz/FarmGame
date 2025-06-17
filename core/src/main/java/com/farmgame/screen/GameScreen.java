@@ -21,10 +21,7 @@ import com.farmgame.game_save.GameState;
 import com.farmgame.player.InventoryItem;
 import com.farmgame.player.Player;
 import com.farmgame.game_save.SaveManager;
-import com.farmgame.ui.AnimalSelectionWindow;
-import com.farmgame.ui.ChoosePlantToFedWindow;
-import com.farmgame.ui.InventorySellWindow;
-import com.farmgame.ui.PlantSelectionWindow;
+import com.farmgame.ui.*;
 
 
 import java.util.ArrayList;
@@ -38,7 +35,6 @@ public class GameScreen implements Screen {
     private final ShapeRenderer shapeRenderer;
     private final SpriteBatch batch;
     private final BitmapFont font = new BitmapFont();
-    private final RandomEventManager randomEventManager;
 
     private SaveManager saveManager;
 
@@ -95,7 +91,7 @@ public class GameScreen implements Screen {
         this.gameViewport = new ScreenViewport(camera);
         this.gameClock = new GameClock();
         this.weather = new Weather();
-        this.randomEventManager = new RandomEventManager();
+
         if (game != null) {
             saveManager = new SaveManager(game.getDifficultyManager());
         } else {
@@ -634,29 +630,55 @@ public class GameScreen implements Screen {
             return;
         }
 
-        if (pen.getState() == AnimalPen.State.EMPTY) {
-            if (currentAction == Action.FEED || currentAction == Action.PLANT || currentAction == Action.WATER || currentAction == Action.HARVEST) {
-                AnimalSelectionWindow animalSelectionWindow = new AnimalSelectionWindow(
-                    "Kup zwierzę", skin, player, pen, () -> updatePlayerStatus(), saveManager.getDifficultyManager()
-                );
-                stage.addActor(animalSelectionWindow);
-                animalSelectionWindow.setPosition(
-                    (stage.getWidth() - animalSelectionWindow.getWidth()) / 2f,
-                    (stage.getHeight() - animalSelectionWindow.getHeight()) / 2f
-                );
+        if (!pen.isBlocked()) {
+            if (!pen.isFull()) {
+                if (currentAction == Action.FEED || currentAction == Action.PLANT || currentAction == Action.WATER || currentAction == Action.HARVEST) {
+                    AnimalSelectionWindow animalSelectionWindow = new AnimalSelectionWindow(
+                            "Kup zwierzę", skin, player, pen, () -> updatePlayerStatus(), saveManager.getDifficultyManager()
+                    );
+                    stage.addActor(animalSelectionWindow);
+                    animalSelectionWindow.setPosition(
+                            (stage.getWidth() - animalSelectionWindow.getWidth()) / 2f,
+                            (stage.getHeight() - animalSelectionWindow.getHeight()) / 2f
+                    );
+                    return;
+                }
+            } else if (currentAction != Action.FEED && currentAction != Action.HARVEST) {
+                if (pen.isMaxCapacity()) {
+                    MessageManager.info("Zagroda jest już w pełni ulepszona!");
+                } else {
+                    PenUpgradeWindow upgradeWindow = new PenUpgradeWindow(
+                            "Ulepsz zagrodę", skin, player, pen, () -> updatePlayerStatus()
+                    );
+                    stage.addActor(upgradeWindow);
+                    upgradeWindow.setPosition(
+                            (stage.getWidth() - upgradeWindow.getWidth()) / 2f,
+                            (stage.getHeight() - upgradeWindow.getHeight()) / 2f
+                    );
+                }
                 return;
             }
         }
 
-        if (pen.getState() == AnimalPen.State.OCCUPIED && pen.getCurrentAnimal() != null) {
-            Animal animal = pen.getCurrentAnimal();
-            Animal.ProductState productState = animal.getProductState();
+        if (pen.getState() == AnimalPen.State.OCCUPIED && !pen.getAnimals().isEmpty()) {
+            Animal animal = pen.getAnimals().get(0);
+            for (Animal a : pen.getAnimals()) {
+                if (currentAction == Action.FEED && a.getProductState() == Animal.ProductState.NOT_FED) {
+                    animal = a;
+                    break;
+                } else if (currentAction == Action.HARVEST && a.getProductState() == Animal.ProductState.READY) {
+                    animal = a;
+                    break;
+                }
+            }
+            final Animal selectedAnimal = animal;
+            Animal.ProductState productState = selectedAnimal.getProductState();
 
             switch (currentAction) {
                 case FEED -> {
                     if (productState == Animal.ProductState.NOT_FED) {
                         boolean hasAnyPlant = false;
-                        for (String fedName : animal.getType().getFeedSet()) {
+                        for (String fedName : selectedAnimal.getType().getFeedSet()) {
                             if (player.getPlayerInventory().getQuantity(fedName) > 0) {
                                 hasAnyPlant = true;
                                 break;
@@ -668,21 +690,32 @@ public class GameScreen implements Screen {
                                 "Wybierz roślinę do karmienia",
                                 skin,
                                 player,
-                                animal.getType(),
+                                    selectedAnimal.getType(),
                                 chosenPlant -> {
-                                    player.getPlayerInventory().removeItem(chosenPlant.getName(), 1);
+                                    int available = player.getPlayerInventory().getQuantity(chosenPlant.getName());
+                                    int fedCount = 0;
 
-                                    boolean fed = animal.fed(chosenPlant.getName());
-                                    if (fed) {
-                                        MessageManager.info("Zwierzę nakarmione rośliną: " + chosenPlant.getName());
-                                        player.addExp(1);
+                                    for (Animal a : pen.getAnimals()) {
+                                        if (available <= 0) break;
+                                        if (a.getProductState() == Animal.ProductState.NOT_FED) {
+                                            boolean fed = a.fed(chosenPlant.getName());
+                                            if (fed) {
+                                                player.getPlayerInventory().removeItem(chosenPlant.getName(), 1);
+                                                available--;
+                                                fedCount++;
+                                            }
+                                        }
+                                    }
+                                    if (fedCount > 0) {
+                                        MessageManager.info("Nakarmiono " + fedCount + " zwierząt rośliną: " + chosenPlant.getName());
+                                        player.addExp(fedCount);
                                         updatePlayerStatus();
 
                                         if (currentInventoryWindow != null && currentInventoryWindow.getStage() != null) {
                                             currentInventoryWindow.refreshInventory();
                                         }
                                     } else {
-                                        MessageManager.warning("Nie udało się nakarmić zwierzęcia tym rodzajem rośliny.");
+                                        MessageManager.warning("Nie udało się nakarmić zwierząt.");
                                     }
                                 }
                             );
@@ -703,10 +736,10 @@ public class GameScreen implements Screen {
 
                 case HARVEST -> {
                     if (productState == Animal.ProductState.READY) {
-                        boolean collected = animal.collectProduct();
+                        boolean collected = selectedAnimal.collectProduct();
                         if (collected) {
-                            String productName = animal.getType().getProductName();
-                            int baseSellPrice = animal.getType().getSellPrice();
+                            String productName = selectedAnimal.getType().getProductName();
+                            int baseSellPrice = selectedAnimal.getType().getSellPrice();
                             int adjustedSellPrice = (int)(baseSellPrice / saveManager.getDifficultyMultiplier());
 
                             InventoryItem newItem = new InventoryItem(productName, 1, adjustedSellPrice);
@@ -825,7 +858,6 @@ public class GameScreen implements Screen {
     public void render(float delta) {
         farmUpdate(delta);
         gameClock.update(delta);
-        randomEventManager.update(gameClock, farm, player);
         weather.update(delta);
         updateClockLabel();
         updateWeatherLabel();
@@ -902,39 +934,35 @@ public class GameScreen implements Screen {
                     shapeRenderer.setColor(penColor);
                     shapeRenderer.rect(drawX, drawY, PEN_SIZE - 2, PEN_SIZE - 2);
                 }
+                if (pen.getState() == AnimalPen.State.OCCUPIED && !pen.getAnimals().isEmpty()) {
+                    int perRow = (int)Math.ceil(Math.sqrt(pen.getCapacity()));
+                    float cell = PEN_SIZE / (float)perRow;
 
-                if (pen.getState() == AnimalPen.State.OCCUPIED && pen.getCurrentAnimal() != null) {
-                    Animal animal = pen.getCurrentAnimal();
-                    Color squareColor = null;
-
-                    switch (animal.getProductState()) {
-                        case NOT_FED -> {
-                            squareColor = Color.RED;
-                        }
-                        case PRODUCTION -> {
-                            squareColor = Color.GREEN;
-                        }
-                        case READY -> {
-                            squareColor = Color.GOLD;
-                        }
-
-                    }
-
-                    float size = PEN_SIZE / 2f;
-                    float centerPenX = drawX + (PEN_SIZE - size) / 2f;
-                    float centerPenY = drawY + (PEN_SIZE - size) / 2f;
+                    for (int i = 0; i < pen.getAnimals().size(); i++) {
+                        Animal animal = pen.getAnimals().get(i);
+                        int row = i / perRow;
+                        int col = i % perRow;
+                        float size = cell - 4f;
+                        float ax = drawX + col * cell + 2f;
+                        float ay = drawY + row * cell + 2f;
 
                         shapeRenderer.setColor(animal.getType().getColor());
-                        shapeRenderer.rect(centerPenX, centerPenY, size, size);
+                        shapeRenderer.rect(ax, ay, size, size);
 
-                    if (squareColor != null) {
-                        shapeRenderer.setColor(squareColor);
-
-                        float squareSize = 32f;
-                        float squareX = drawX + (PEN_SIZE - squareSize - 4);
-                        float squareY = drawY + (PEN_SIZE - squareSize - 4);
-
-                        shapeRenderer.rect(squareX, squareY, squareSize, squareSize);
+                        if (animal.getProductState() != Animal.ProductState.NOT_FED) {
+                            Color squareColor = switch (animal.getProductState()) {
+                                case PRODUCTION -> Color.GREEN;
+                                case READY -> Color.GOLD;
+                                default -> null;
+                            };
+                            if (squareColor != null) {
+                                shapeRenderer.setColor(squareColor);
+                                float squareSize = size / 2f;
+                                float squareX = ax + size - squareSize;
+                                float squareY = ay + size - squareSize;
+                                shapeRenderer.rect(squareX, squareY, squareSize, squareSize);
+                            }
+                        }
                     }
                 }
             }
@@ -966,75 +994,69 @@ public class GameScreen implements Screen {
                 }
 
                 if (plot.getPlant() != null && plot.getState() != Plot.State.EMPTY) {
-                    if (plot.getState() == Plot.State.READY_TO_HARVEST) {
-                        String readyText = "Do zbioru!";
-                        GlyphLayout layout = new GlyphLayout(font, readyText);
-                        float textX = x * TILE_SIZE + X_OFFSET + (TILE_SIZE - layout.width) / 2;
-                        float textY = y * TILE_SIZE + Y_OFFSET + (TILE_SIZE + layout.height) / 2;
+                    float timeLeft = plot.getPlant().getTimeRemaining();
+                    String timeText = String.format("%.0f", timeLeft);
+                    GlyphLayout layout = new GlyphLayout(font, timeText);
 
-                        font.setColor(Color.BLACK);
-                        font.draw(batch, readyText, textX - 1, textY);
-                        font.draw(batch, readyText, textX + 1, textY);
-                        font.draw(batch, readyText, textX, textY - 1);
-                        font.draw(batch, readyText, textX, textY + 1);
-                        font.setColor(Color.GOLD);
-                        font.draw(batch, readyText, textX, textY);
-                    } else {
-                        float timeLeft = plot.getPlant().getTimeRemaining();
-                        String timeText = String.format("%.0f", timeLeft);
-                        GlyphLayout layout = new GlyphLayout(font, timeText);
+                    float textX = x * TILE_SIZE + X_OFFSET + (TILE_SIZE - layout.width) / 2;
+                    float textY = y * TILE_SIZE + Y_OFFSET + (TILE_SIZE + layout.height) / 2;
 
-                        float textX = x * TILE_SIZE + X_OFFSET + (TILE_SIZE - layout.width) / 2;
-                        float textY = y * TILE_SIZE + Y_OFFSET + (TILE_SIZE + layout.height) / 2;
+                    font.setColor(Color.BLACK);
+                    font.draw(batch, timeText, textX-1, textY);
+                    font.draw(batch, timeText, textX+1, textY);
+                    font.draw(batch, timeText, textX, textY-1);
+                    font.draw(batch, timeText, textX, textY+1);
 
-                        font.setColor(Color.BLACK);
-                        font.draw(batch, timeText, textX - 1, textY);
-                        font.draw(batch, timeText, textX + 1, textY);
-                        font.draw(batch, timeText, textX, textY - 1);
-                        font.draw(batch, timeText, textX, textY + 1);
-
-                        font.setColor(Color.WHITE);
-                        font.draw(batch, timeText, textX, textY);
-                    }
+                    font.setColor(Color.WHITE);
+                    font.draw(batch, timeText, textX, textY);
                 }
             }
-            // Tekst do PEN
-            for (int px = 0; px < farm.getPenWidth(); px++) {
-                for (int py = 0; py < farm.getPenHeight(); py++) {
-                    AnimalPen pen = farm.getAnimalPen(px, py);
-                    if (pen == null) continue;
+        }
+        // Tekst do PEN
+        for (int px = 0; px < farm.getPenWidth(); px++) {
+            for (int py = 0; py < farm.getPenHeight(); py++) {
+                AnimalPen pen = farm.getAnimalPen(px, py);
+                if (pen == null) continue;
 
-                    float drawX = px * PEN_SIZE + penOffsetX;
-                    float drawY = py * PEN_SIZE + Y_OFFSET;
+                float drawX = px * PEN_SIZE + penOffsetX;
+                float drawY = py * PEN_SIZE + Y_OFFSET;
 
-                    if (pen.isBlocked() && hasUnlockedNeighborPen(px, py)) {
-                        String plusSign = "+";
-                        GlyphLayout plusLayout = new GlyphLayout(font, plusSign);
-                        float plusX = drawX + (PEN_SIZE - plusLayout.width) / 2;
-                        float plusY = drawY + (PEN_SIZE + plusLayout.height) / 2;
+                if (pen.isBlocked() && hasUnlockedNeighborPen(px, py)) {
+                    String plusSign = "+";
+                    GlyphLayout plusLayout = new GlyphLayout(font, plusSign);
+                    float plusX = drawX + (PEN_SIZE - plusLayout.width) / 2;
+                    float plusY = drawY + (PEN_SIZE + plusLayout.height) / 2;
 
-                        font.setColor(Color.WHITE);
-                        font.draw(batch, plusSign, plusX, plusY);
+                    font.setColor(Color.WHITE);
+                    font.draw(batch, plusSign, plusX, plusY);
 
-                        int penPrice = farm.getPenPrice(px, py);
-                        String penPriceText = penPrice + "$";
-                        GlyphLayout priceLayout = new GlyphLayout(font, penPriceText);
-                        float priceX = drawX + (PEN_SIZE - priceLayout.width) / 2;
-                        float priceY = drawY + 2 + priceLayout.height;
+                    int penPrice = farm.getPenPrice(px, py);
+                    String penPriceText = penPrice + "$";
+                    GlyphLayout priceLayout = new GlyphLayout(font, penPriceText);
+                    float priceX = drawX + (PEN_SIZE - priceLayout.width) / 2;
+                    float priceY = drawY + 2 + priceLayout.height;
 
-                        font.draw(batch, penPriceText, priceX, priceY);
-                    }
+                    font.draw(batch, penPriceText, priceX, priceY);
+                }
 
-                    if (pen.getState() == AnimalPen.State.OCCUPIED && pen.getCurrentAnimal() != null) {
-                        Animal animal = pen.getCurrentAnimal();
+                if (pen.getState() == AnimalPen.State.OCCUPIED && !pen.getAnimals().isEmpty()) {
+                    int perRow = (int)Math.ceil(Math.sqrt(pen.getCapacity()));
+                    float cell = PEN_SIZE / (float)perRow;
+
+                    for (int i = 0; i < pen.getAnimals().size(); i++) {
+                        Animal animal = pen.getAnimals().get(i);
                         float timeLeft = animal.getTimeToNextProduct();
 
-                        // Nazwa zwierzęcia
+                        int row = i / perRow;
+                        int col = i % perRow;
+                        float ax = drawX + col * cell;
+                        float ay = drawY + row * cell;
+
                         String animalName = animal.getType().getName();
                         GlyphLayout layout = new GlyphLayout(font, animalName);
 
-                        float textX = drawX + (PEN_SIZE - layout.width) / 2f;
-                        float textY = drawY + (PEN_SIZE + layout.height) / 2f;
+                        float textX = ax + (cell - layout.width) / 2f;
+                        float textY = ay + cell - 4;
 
                         font.setColor(Color.BLACK);
                         font.draw(batch, animalName, textX - 1, textY);
@@ -1048,8 +1070,8 @@ public class GameScreen implements Screen {
                             String timeText = String.format("%.0f", timeLeft);
                             GlyphLayout timeLayout = new GlyphLayout(font, timeText);
 
-                            float timeX = drawX + (PEN_SIZE - timeLayout.width) / 2f;
-                            float timeY = drawY + (PEN_SIZE + layout.height) / 2f - 20;
+                            float timeX = ax + (cell - timeLayout.width) / 2f;
+                            float timeY = ay + cell / 2f;
 
                             font.setColor(Color.BLACK);
                             font.draw(batch, timeText, timeX - 1, timeY);
@@ -1061,8 +1083,8 @@ public class GameScreen implements Screen {
                         } else if (animal.getProductState() == Animal.ProductState.READY) {
                             String readyText = "Do zbioru!";
                             GlyphLayout readyLayout = new GlyphLayout(font, readyText);
-                            float readyX = drawX + (PEN_SIZE - readyLayout.width) / 2f;
-                            float readyY = textY - 20;
+                            float readyX = ax + (cell - readyLayout.width) / 2f;
+                            float readyY = ay + cell / 2f;
 
                             font.setColor(Color.BLACK);
                             font.draw(batch, readyText, readyX - 1, readyY);
@@ -1074,6 +1096,7 @@ public class GameScreen implements Screen {
                             font.draw(batch, readyText, readyX, readyY);
                         }
                     }
+
                 }
             }
         }
