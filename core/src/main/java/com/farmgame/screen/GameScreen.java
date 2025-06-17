@@ -584,9 +584,17 @@ public class GameScreen implements Screen {
                 }
             }
             case WATER -> {
-                plot.water();
-                player.addExp(1);
-                updatePlayerStatus();
+                Plant plant = plot.getPlant();
+                if (plant != null &&
+                    !plant.isWatered() &&
+                    !plant.isReadyToHarvest() &&
+                    (plot.getState() == Plot.State.PLANTED || plot.getState() == Plot.State.GROWTH)) {
+                    plot.water();
+                    player.addExp(1);
+                    updatePlayerStatus();
+                } else {
+                    MessageManager.showMessage("Nie można podlać, brak rosnącej rośliny lub jest podlana!", Color.BLUE);
+                }
             }
             case HARVEST -> {
                 if (plot.getState() == Plot.State.READY_TO_HARVEST && plot.getPlant() != null) {
