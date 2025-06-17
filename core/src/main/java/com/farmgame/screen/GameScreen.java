@@ -38,6 +38,7 @@ public class GameScreen implements Screen {
     private final ShapeRenderer shapeRenderer;
     private final SpriteBatch batch;
     private final BitmapFont font = new BitmapFont();
+    private final RandomEventManager randomEventManager;
 
     private SaveManager saveManager;
 
@@ -94,7 +95,7 @@ public class GameScreen implements Screen {
         this.gameViewport = new ScreenViewport(camera);
         this.gameClock = new GameClock();
         this.weather = new Weather();
-
+        this.randomEventManager = new RandomEventManager();
         if (game != null) {
             saveManager = new SaveManager(game.getDifficultyManager());
         } else {
@@ -824,6 +825,7 @@ public class GameScreen implements Screen {
     public void render(float delta) {
         farmUpdate(delta);
         gameClock.update(delta);
+        randomEventManager.update(gameClock, farm, player);
         weather.update(delta);
         updateClockLabel();
         updateWeatherLabel();
@@ -964,101 +966,114 @@ public class GameScreen implements Screen {
                 }
 
                 if (plot.getPlant() != null && plot.getState() != Plot.State.EMPTY) {
-                    float timeLeft = plot.getPlant().getTimeRemaining();
-                    String timeText = String.format("%.0f", timeLeft);
-                    GlyphLayout layout = new GlyphLayout(font, timeText);
+                    if (plot.getState() == Plot.State.READY_TO_HARVEST) {
+                        String readyText = "Do zbioru!";
+                        GlyphLayout layout = new GlyphLayout(font, readyText);
+                        float textX = x * TILE_SIZE + X_OFFSET + (TILE_SIZE - layout.width) / 2;
+                        float textY = y * TILE_SIZE + Y_OFFSET + (TILE_SIZE + layout.height) / 2;
 
-                    float textX = x * TILE_SIZE + X_OFFSET + (TILE_SIZE - layout.width) / 2;
-                    float textY = y * TILE_SIZE + Y_OFFSET + (TILE_SIZE + layout.height) / 2;
+                        font.setColor(Color.BLACK);
+                        font.draw(batch, readyText, textX - 1, textY);
+                        font.draw(batch, readyText, textX + 1, textY);
+                        font.draw(batch, readyText, textX, textY - 1);
+                        font.draw(batch, readyText, textX, textY + 1);
+                        font.setColor(Color.GOLD);
+                        font.draw(batch, readyText, textX, textY);
+                    } else {
+                        float timeLeft = plot.getPlant().getTimeRemaining();
+                        String timeText = String.format("%.0f", timeLeft);
+                        GlyphLayout layout = new GlyphLayout(font, timeText);
 
-                    font.setColor(Color.BLACK);
-                    font.draw(batch, timeText, textX-1, textY);
-                    font.draw(batch, timeText, textX+1, textY);
-                    font.draw(batch, timeText, textX, textY-1);
-                    font.draw(batch, timeText, textX, textY+1);
+                        float textX = x * TILE_SIZE + X_OFFSET + (TILE_SIZE - layout.width) / 2;
+                        float textY = y * TILE_SIZE + Y_OFFSET + (TILE_SIZE + layout.height) / 2;
 
-                    font.setColor(Color.WHITE);
-                    font.draw(batch, timeText, textX, textY);
+                        font.setColor(Color.BLACK);
+                        font.draw(batch, timeText, textX - 1, textY);
+                        font.draw(batch, timeText, textX + 1, textY);
+                        font.draw(batch, timeText, textX, textY - 1);
+                        font.draw(batch, timeText, textX, textY + 1);
+
+                        font.setColor(Color.WHITE);
+                        font.draw(batch, timeText, textX, textY);
+                    }
                 }
             }
-        }
-        // Tekst do PEN
-        for (int px = 0; px < farm.getPenWidth(); px++) {
-            for (int py = 0; py < farm.getPenHeight(); py++) {
-                AnimalPen pen = farm.getAnimalPen(px, py);
-                if (pen == null) continue;
+            // Tekst do PEN
+            for (int px = 0; px < farm.getPenWidth(); px++) {
+                for (int py = 0; py < farm.getPenHeight(); py++) {
+                    AnimalPen pen = farm.getAnimalPen(px, py);
+                    if (pen == null) continue;
 
-                float drawX = px * PEN_SIZE + penOffsetX;
-                float drawY = py * PEN_SIZE + Y_OFFSET;
+                    float drawX = px * PEN_SIZE + penOffsetX;
+                    float drawY = py * PEN_SIZE + Y_OFFSET;
 
-                if (pen.isBlocked() && hasUnlockedNeighborPen(px, py)) {
-                    String plusSign = "+";
-                    GlyphLayout plusLayout = new GlyphLayout(font, plusSign);
-                    float plusX = drawX + (PEN_SIZE - plusLayout.width) / 2;
-                    float plusY = drawY + (PEN_SIZE + plusLayout.height) / 2;
+                    if (pen.isBlocked() && hasUnlockedNeighborPen(px, py)) {
+                        String plusSign = "+";
+                        GlyphLayout plusLayout = new GlyphLayout(font, plusSign);
+                        float plusX = drawX + (PEN_SIZE - plusLayout.width) / 2;
+                        float plusY = drawY + (PEN_SIZE + plusLayout.height) / 2;
 
-                    font.setColor(Color.WHITE);
-                    font.draw(batch, plusSign, plusX, plusY);
-
-                    int penPrice = farm.getPenPrice(px, py);
-                    String penPriceText = penPrice + "$";
-                    GlyphLayout priceLayout = new GlyphLayout(font, penPriceText);
-                    float priceX = drawX + (PEN_SIZE - priceLayout.width) / 2;
-                    float priceY = drawY + 2 + priceLayout.height;
-
-                    font.draw(batch, penPriceText, priceX, priceY);
-                }
-
-                if (pen.getState() == AnimalPen.State.OCCUPIED && pen.getCurrentAnimal() != null) {
-                    Animal animal = pen.getCurrentAnimal();
-                    float timeLeft = animal.getTimeToNextProduct();
-
-                    // Nazwa zwierzęcia
-                    String animalName = animal.getType().getName();
-                    GlyphLayout layout = new GlyphLayout(font, animalName);
-
-                    float textX = drawX + (PEN_SIZE - layout.width) / 2f;
-                    float textY = drawY + (PEN_SIZE + layout.height) / 2f;
-
-                    font.setColor(Color.BLACK);
-                    font.draw(batch, animalName, textX - 1, textY);
-                    font.draw(batch, animalName, textX + 1, textY);
-                    font.draw(batch, animalName, textX, textY - 1);
-                    font.draw(batch, animalName, textX, textY + 1);
-                    font.setColor(Color.WHITE);
-                    font.draw(batch, animalName, textX, textY);
-
-                    if (animal.getProductState() == Animal.ProductState.PRODUCTION && timeLeft >= 0f) {
-                        String timeText = String.format("%.0f", timeLeft);
-                        GlyphLayout timeLayout = new GlyphLayout(font, timeText);
-
-                        float timeX = drawX + (PEN_SIZE - timeLayout.width) / 2f;
-                        float timeY = drawY + (PEN_SIZE + layout.height) / 2f - 20;
-
-                        font.setColor(Color.BLACK);
-                        font.draw(batch, timeText, timeX - 1, timeY);
-                        font.draw(batch, timeText, timeX + 1, timeY);
-                        font.draw(batch, timeText, timeX, timeY - 1);
-                        font.draw(batch, timeText, timeX, timeY + 1);
                         font.setColor(Color.WHITE);
-                        font.draw(batch, timeText, timeX, timeY);
+                        font.draw(batch, plusSign, plusX, plusY);
+
+                        int penPrice = farm.getPenPrice(px, py);
+                        String penPriceText = penPrice + "$";
+                        GlyphLayout priceLayout = new GlyphLayout(font, penPriceText);
+                        float priceX = drawX + (PEN_SIZE - priceLayout.width) / 2;
+                        float priceY = drawY + 2 + priceLayout.height;
+
+                        font.draw(batch, penPriceText, priceX, priceY);
                     }
-                    else if (animal.getProductState() == Animal.ProductState.READY) {
-                        String readyText = "Do zbioru!";
-                        GlyphLayout readyLayout = new GlyphLayout(font, readyText);
-                        float readyX = drawX + (PEN_SIZE - readyLayout.width) / 2f;
-                        float readyY = textY - 20;
+
+                    if (pen.getState() == AnimalPen.State.OCCUPIED && pen.getCurrentAnimal() != null) {
+                        Animal animal = pen.getCurrentAnimal();
+                        float timeLeft = animal.getTimeToNextProduct();
+
+                        // Nazwa zwierzęcia
+                        String animalName = animal.getType().getName();
+                        GlyphLayout layout = new GlyphLayout(font, animalName);
+
+                        float textX = drawX + (PEN_SIZE - layout.width) / 2f;
+                        float textY = drawY + (PEN_SIZE + layout.height) / 2f;
 
                         font.setColor(Color.BLACK);
-                        font.draw(batch, readyText, readyX - 1, readyY);
-                        font.draw(batch, readyText, readyX + 1, readyY);
-                        font.draw(batch, readyText, readyX, readyY - 1);
-                        font.draw(batch, readyText, readyX, readyY + 1);
+                        font.draw(batch, animalName, textX - 1, textY);
+                        font.draw(batch, animalName, textX + 1, textY);
+                        font.draw(batch, animalName, textX, textY - 1);
+                        font.draw(batch, animalName, textX, textY + 1);
+                        font.setColor(Color.WHITE);
+                        font.draw(batch, animalName, textX, textY);
 
-                        font.setColor(Color.GOLD);
-                        font.draw(batch, readyText, readyX, readyY);
+                        if (animal.getProductState() == Animal.ProductState.PRODUCTION && timeLeft >= 0f) {
+                            String timeText = String.format("%.0f", timeLeft);
+                            GlyphLayout timeLayout = new GlyphLayout(font, timeText);
+
+                            float timeX = drawX + (PEN_SIZE - timeLayout.width) / 2f;
+                            float timeY = drawY + (PEN_SIZE + layout.height) / 2f - 20;
+
+                            font.setColor(Color.BLACK);
+                            font.draw(batch, timeText, timeX - 1, timeY);
+                            font.draw(batch, timeText, timeX + 1, timeY);
+                            font.draw(batch, timeText, timeX, timeY - 1);
+                            font.draw(batch, timeText, timeX, timeY + 1);
+                            font.setColor(Color.WHITE);
+                            font.draw(batch, timeText, timeX, timeY);
+                        } else if (animal.getProductState() == Animal.ProductState.READY) {
+                            String readyText = "Do zbioru!";
+                            GlyphLayout readyLayout = new GlyphLayout(font, readyText);
+                            float readyX = drawX + (PEN_SIZE - readyLayout.width) / 2f;
+                            float readyY = textY - 20;
+
+                            font.setColor(Color.BLACK);
+                            font.draw(batch, readyText, readyX - 1, readyY);
+                            font.draw(batch, readyText, readyX + 1, readyY);
+                            font.draw(batch, readyText, readyX, readyY - 1);
+                            font.draw(batch, readyText, readyX, readyY + 1);
+
+                            font.setColor(Color.GOLD);
+                            font.draw(batch, readyText, readyX, readyY);
+                        }
                     }
-
                 }
             }
         }

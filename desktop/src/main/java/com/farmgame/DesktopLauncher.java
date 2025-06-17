@@ -7,7 +7,7 @@ public class DesktopLauncher {
     public static void main(String[] args) {
         Lwjgl3ApplicationConfiguration config = new Lwjgl3ApplicationConfiguration();
         config.setTitle("Farm Game");
-        config.setWindowedMode(1200, 1000);
+        config.setWindowedMode(1280, 720);
         new Lwjgl3Application(new FarmGame(), config);
     }
 }

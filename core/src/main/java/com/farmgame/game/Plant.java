@@ -25,14 +25,15 @@ public class Plant {
         return watered;
     }
 
-    public void update(float delta){
-        if (currentGrowthTime < type.getGrowthTime()){
+    public void update(float delta) {
+        float adjustedGrowthTime = type.getGrowthTime() * difficultyManager.getTimeMultiplier();
+        if (currentGrowthTime < adjustedGrowthTime) {
             float wateringMultiplier = watered ? 1.5f : 1.0f;
 
             currentGrowthTime += delta * wateringMultiplier;
 
-            if (currentGrowthTime > type.getGrowthTime()){
-                currentGrowthTime = type.getGrowthTime();
+            if (currentGrowthTime > adjustedGrowthTime) {
+                currentGrowthTime = adjustedGrowthTime;
             }
         }
     }
@@ -88,7 +89,7 @@ public class Plant {
     public GrowthStage getStage() {
         float percent = getGrowthPercent();
         if (percent < 0.33f) return GrowthStage.PLANTED;
-        else if (percent < 0.99f) return GrowthStage.GROWING;
+        else if (percent < 1.00f) return GrowthStage.GROWING;
         else return GrowthStage.READY;
     }
 
