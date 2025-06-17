@@ -143,8 +143,8 @@ public class SaveManager {
 
         // Konwertuj pogodę
         SavedWeather savedWeather = new SavedWeather(
-            weather.getCurrentWeatherName(), // będziesz musiał dodać getter
-            weather.getTimeUntilChange() // będziesz musiał dodać getter
+            weather.getCurrentWeatherName(),
+            weather.getTimeUntilChange()
         );
 
         return new GameState(
@@ -176,7 +176,7 @@ public class SaveManager {
     // Zapisywanie stanu gry
     public void saveGame(Player player, Farm farm, GameClock gameClock,
                          Weather weather, PlantType selectedPlant, String currentAction) {
-        saveGame(player, farm, gameClock, weather, selectedPlant, currentAction, 1); // Default to slot 1
+        saveGame(player, farm, gameClock, weather, selectedPlant, currentAction, 1);
     }
 
     public void saveGame(Player player, Farm farm, GameClock gameClock,
@@ -225,12 +225,12 @@ public class SaveManager {
                 return gameState;
             } else {
                 Gdx.app.log("SaveManager", "Plik zapisu nie istnieje w slocie " + slot + ", tworzę nowy stan gry");
-                return null; // Zwróć null jeśli nie ma zapisu
+                return null;
             }
         } catch (Exception e) {
             Gdx.app.error("SaveManager", "Błąd podczas wczytywania: " + e.getMessage());
             e.printStackTrace();
-            return null; // Zwróć null w przypadku błędu
+            return null;
         }
     }
 
@@ -281,12 +281,12 @@ public class SaveManager {
                                     PlantType plantType = findPlantTypeByName(savedPlot.plant.typeName);
                                     if (plantType != null) {
                                         Plant plant = new Plant(plantType);
-                                        plant.setTimeRemaining(savedPlot.plant.timeRemaining); // dodaj setter
-                                        plant.setWatered(savedPlot.plant.isWatered); // dodaj setter
+                                        plant.setTimeRemaining(savedPlot.plant.timeRemaining);
+                                        plant.setWatered(savedPlot.plant.isWatered);
                                         plot.plant(plant);
 
                                         // Ustaw stan działki
-                                        plot.setState(Plot.State.valueOf(savedPlot.state)); // dodaj setter
+                                        plot.setState(Plot.State.valueOf(savedPlot.state));
                                     }
                                 }
                             }
@@ -303,9 +303,9 @@ public class SaveManager {
                             if (pen != null) {
                                 // Przywróć stan zagrody
                                 if (savedPen.isBlocked) {
-                                    pen.block(); // będziesz musiał dodać metodę
+                                    pen.block();
                                 } else {
-                                    pen.unlock(); // już masz
+                                    pen.unlock();
                                 }
 
                                 // Przywróć zwierzę, jeśli istnieje
@@ -313,10 +313,10 @@ public class SaveManager {
                                     AnimalType animalType = findAnimalTypeByName(savedPen.currentAnimal.typeName);
                                     if (animalType != null) {
                                         Animal animal = new Animal(animalType);
-                                        animal.setProductState(Animal.ProductState.valueOf(savedPen.currentAnimal.productState)); // dodaj setter
-                                        animal.setTimeToNextProduct(savedPen.currentAnimal.timeToNextProduct); // dodaj setter
-                                        pen.setCurrentAnimal(animal); // dodaj setter
-                                        pen.setState(AnimalPen.State.valueOf(savedPen.state)); // dodaj setter
+                                        animal.setProductState(Animal.ProductState.valueOf(savedPen.currentAnimal.productState));
+                                        animal.setTimeToNextProduct(savedPen.currentAnimal.timeToNextProduct);
+                                        pen.setCurrentAnimal(animal);
+                                        pen.setState(AnimalPen.State.valueOf(savedPen.state));
                                     }
                                 }
                             }
@@ -327,16 +327,16 @@ public class SaveManager {
 
             // Przywróć zegar gry
             if (gameState.gameClock != null) {
-                gameClock.setDay(gameState.gameClock.day); // dodaj setter
-                gameClock.setWeekDay(GameClock.WeekDay.valueOf(gameState.gameClock.weekDay)); // dodaj setter
-                gameClock.setTimeOfDay(GameClock.TimeOfDay.valueOf(gameState.gameClock.timeOfDay)); // dodaj setter
-                gameClock.setCurrentTime(gameState.gameClock.currentTime); // dodaj setter
+                gameClock.setDay(gameState.gameClock.day);
+                gameClock.setWeekDay(GameClock.WeekDay.valueOf(gameState.gameClock.weekDay));
+                gameClock.setTimeOfDay(GameClock.TimeOfDay.valueOf(gameState.gameClock.timeOfDay));
+                gameClock.setCurrentTime(gameState.gameClock.currentTime);
             }
 
             // Przywróć pogodę
             if (gameState.weather != null) {
-                weather.setCurrentWeather(gameState.weather.currentWeather); // dodaj setter
-                weather.setTimeUntilChange(gameState.weather.timeUntilChange); // dodaj setter
+                weather.setCurrentWeather(gameState.weather.currentWeather);
+                weather.setTimeUntilChange(gameState.weather.timeUntilChange);
             }
 
             Gdx.app.log("SaveManager", "Stan gry przywrócony pomyślnie");
@@ -348,11 +348,11 @@ public class SaveManager {
     }
 
     private PlantType findPlantTypeByName(String name) {
-        return PlantType.getByName(name); // przykład
+        return PlantType.getByName(name);
     }
 
     private AnimalType findAnimalTypeByName(String name) {
-        return AnimalType.getByName(name); // przykład
+        return AnimalType.getByName(name);
     }
 
     public boolean saveExists() {

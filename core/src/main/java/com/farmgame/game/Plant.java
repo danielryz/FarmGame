@@ -66,6 +66,13 @@ public class Plant {
 
     public void setTimeRemaining(float timeRemaining) {
         currentGrowthTime = timeRemaining;
+        float adjustedGrowthTime = type.getGrowthTime() * difficultyManager.getTimeMultiplier();
+        currentGrowthTime = adjustedGrowthTime - timeRemaining;
+        if (currentGrowthTime < 0f) {
+            currentGrowthTime = 0f;
+        } else if (currentGrowthTime > adjustedGrowthTime) {
+            currentGrowthTime = adjustedGrowthTime;
+        }
     }
 
     public void setWatered(boolean isWatered) {
