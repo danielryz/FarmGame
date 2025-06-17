@@ -12,6 +12,7 @@ public class Plot {
     private State state = State.BLOCKED;
     private Plant plant;
     private DifficultyManager difficultyManager;
+    private boolean autoWater;
 
     public Plot() {
         this(new DifficultyManager());
@@ -19,6 +20,7 @@ public class Plot {
 
     public Plot(DifficultyManager difficultyManager) {
         this.difficultyManager = difficultyManager;
+        this.autoWater = false;
     }
 
     public State getState() {
@@ -32,6 +34,7 @@ public class Plot {
     public void plant(Plant plant) {
         if (state == State.EMPTY) {
             this.plant = plant;
+            plant.setAutoWatered(autoWater);
             this.state = State.PLANTED;
         }
     }
@@ -39,6 +42,7 @@ public class Plot {
     public void plant(PlantType plantType) {
         if (state == State.EMPTY) {
             this.plant = new Plant(plantType, difficultyManager);
+            this.plant.setAutoWatered(autoWater);
             this.state = State.PLANTED;
         }
     }
@@ -78,6 +82,19 @@ public class Plot {
         if (plant != null) {
             plant = null;
             state = State.EMPTY;
+        }
+    }
+
+    public void setAutoWatered(boolean value) {
+        this.autoWater = value;
+        if (plant != null) plant.setAutoWatered(value);
+    }
+
+    public boolean isAutoWatered() { return autoWater; }
+
+    public void applyFertilizer(float duration) {
+        if (plant != null) {
+            plant.applyFertilizer(duration);
         }
     }
 

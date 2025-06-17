@@ -20,6 +20,7 @@ public class Farm {
 
     private DifficultyManager difficultyManager;
 
+    private boolean wateringSystem;
 
     public Farm(int width, int height, int penWidth, int penHeight) {
         this(width, height, penWidth, penHeight, new DifficultyManager());
@@ -34,6 +35,8 @@ public class Farm {
         this.penHeight = penHeight;
         plotPrices = new int[width][height];
         penPrices = new int[penWidth][penHeight];
+
+        this.wateringSystem = false;
 
         plots = new Plot[width][height];
         for (int x = 0; x < width; x++) {
@@ -122,6 +125,26 @@ public class Farm {
         if (pen != null) {
             pen.increaseCapacity();
         }
+    }
+
+    public boolean hasWateringSystem() {
+        return wateringSystem;
+    }
+
+    public void setWateringSystem(boolean active) {
+        this.wateringSystem = active;
+        if (active) {
+            for (int x = 0; x < width; x++) {
+                for (int y = 0; y < height; y++) {
+                    Plot plot = plots[x][y];
+                    if (plot != null) plot.setAutoWatered(true);
+                }
+            }
+        }
+    }
+
+    public void purchaseWateringSystem() {
+        setWateringSystem(true);
     }
 
 

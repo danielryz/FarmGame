@@ -4,6 +4,8 @@ public class Plant {
     private final PlantType type;
     private float currentGrowthTime;
     private boolean watered;
+    private boolean autoWatered;
+    private float fertilizerTimer;
     private DifficultyManager difficultyManager;
 
     public Plant(PlantType type) {
@@ -14,6 +16,8 @@ public class Plant {
         this.type = type;
         this.currentGrowthTime = 0f;
         this.watered = false;
+        this.autoWatered = false;
+        this.fertilizerTimer = 0f;
         this.difficultyManager = difficultyManager;
     }
 
@@ -25,12 +29,27 @@ public class Plant {
         return watered;
     }
 
+    public boolean isAutoWatered() { return autoWatered; }
+
+    public float getFertilizerTimer() { return fertilizerTimer; }
+
+    public void setAutoWatered(boolean autoWatered) { this.autoWatered = autoWatered; }
+
+    public void applyFertilizer(float duration) { if (duration > fertilizerTimer) fertilizerTimer = duration; }
+
+
     public void update(float delta) {
         float adjustedGrowthTime = type.getGrowthTime() * difficultyManager.getTimeMultiplier();
         if (currentGrowthTime < adjustedGrowthTime) {
-            float wateringMultiplier = watered ? 1.5f : 1.0f;
+            float wateringMultiplier = (watered || autoWatered) ? 1.5f : 1.0f;
+            float fertilizerMultiplier = fertilizerTimer > 0f ? 1.5f : 1.0f;
 
-            currentGrowthTime += delta * wateringMultiplier;
+            currentGrowthTime += delta * wateringMultiplier * fertilizerMultiplier;
+
+            if (fertilizerTimer > 0f) {
+                fertilizerTimer -= delta;
+                if (fertilizerTimer < 0f) fertilizerTimer = 0f;
+            }
 
             if (currentGrowthTime > adjustedGrowthTime) {
                 currentGrowthTime = adjustedGrowthTime;
@@ -84,6 +103,10 @@ public class Plant {
         PLANTED,
         GROWING,
         READY
+    }
+
+    public float getFertilizerTimeRemaining() {
+        return fertilizerTimer;
     }
 
     public GrowthStage getStage() {
