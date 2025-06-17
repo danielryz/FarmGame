@@ -14,8 +14,8 @@ public class InventorySellWindow extends Window {
     private final Player player;
 
     private final Table contentTable;
-    public InventorySellWindow(String tile, Skin skin, Player player, Runnable onSellCallback) {
-        super(tile, skin);
+    public InventorySellWindow(String title, Skin skin, Player player, Runnable onSellCallback) {
+        super(title, skin);
 
         this.player = player;
         this.onSellCallback = onSellCallback;

@@ -19,12 +19,12 @@ public class PlantSelectionWindow extends Window {
     private final OnPlantChosenListener chosenListener;
     private final DifficultyManager difficultyManager;
 
-    public PlantSelectionWindow(String tile, Skin skin, OnPlantChosenListener chosenListener, Player player){
-        this(tile, skin, chosenListener, player, new DifficultyManager());
+    public PlantSelectionWindow(String title, Skin skin, OnPlantChosenListener chosenListener, Player player){
+        this(title, skin, chosenListener, player, new DifficultyManager());
     }
 
-    public PlantSelectionWindow(String tile, Skin skin, OnPlantChosenListener chosenListener, Player player, float difficultyMultiplier){
-        this(tile, skin, chosenListener, player, createDifficultyManager(difficultyMultiplier));
+    public PlantSelectionWindow(String title, Skin skin, OnPlantChosenListener chosenListener, Player player, float difficultyMultiplier){
+        this(title, skin, chosenListener, player, createDifficultyManager(difficultyMultiplier));
     }
 
     private static DifficultyManager createDifficultyManager(float multiplier) {
@@ -33,8 +33,8 @@ public class PlantSelectionWindow extends Window {
         return manager;
     }
 
-    public PlantSelectionWindow(String tile, Skin skin, OnPlantChosenListener chosenListener, Player player, DifficultyManager difficultyManager){
-        super(tile, skin);
+    public PlantSelectionWindow(String title, Skin skin, OnPlantChosenListener chosenListener, Player player, DifficultyManager difficultyManager){
+        super(title, skin);
         this.chosenListener = chosenListener;
         this.difficultyManager = difficultyManager;
 

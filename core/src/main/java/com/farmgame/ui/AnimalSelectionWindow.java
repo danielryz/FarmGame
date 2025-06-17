@@ -17,12 +17,12 @@ public class AnimalSelectionWindow extends Window {
     private final Player player;
     private final DifficultyManager difficultyManager;
 
-    public AnimalSelectionWindow(String tile, Skin skin, Player player, AnimalPen animalPen, Runnable onBuyCallback){
-        this(tile, skin, player, animalPen, onBuyCallback, new DifficultyManager());
+    public AnimalSelectionWindow(String title, Skin skin, Player player, AnimalPen animalPen, Runnable onBuyCallback){
+        this(title, skin, player, animalPen, onBuyCallback, new DifficultyManager());
     }
 
-    public AnimalSelectionWindow(String tile, Skin skin, Player player, AnimalPen animalPen, Runnable onBuyCallback, float difficultyMultiplier){
-        this(tile, skin, player, animalPen, onBuyCallback, createDifficultyManager(difficultyMultiplier));
+    public AnimalSelectionWindow(String title, Skin skin, Player player, AnimalPen animalPen, Runnable onBuyCallback, float difficultyMultiplier){
+        this(title, skin, player, animalPen, onBuyCallback, createDifficultyManager(difficultyMultiplier));
     }
 
     private static DifficultyManager createDifficultyManager(float multiplier) {
@@ -31,8 +31,8 @@ public class AnimalSelectionWindow extends Window {
         return manager;
     }
 
-    public AnimalSelectionWindow(String tile, Skin skin, Player player, AnimalPen animalPen, Runnable onBuyCallback, DifficultyManager difficultyManager){
-        super(tile, skin);
+    public AnimalSelectionWindow(String title, Skin skin, Player player, AnimalPen animalPen, Runnable onBuyCallback, DifficultyManager difficultyManager){
+        super(title, skin);
         this.player = player;
         this.onBuyCallback = onBuyCallback;
         this.difficultyManager = difficultyManager;
