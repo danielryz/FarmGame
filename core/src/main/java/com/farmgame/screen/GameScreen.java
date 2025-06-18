@@ -69,6 +69,7 @@ public class GameScreen implements Screen {
     private final Label playerLevelLabel;
     private final Label playerExpLabel;
     private final Label expToNextLevelLabel;
+    private final Label inventoryCapacityLabel;
 
     private Label messageLabel;
     private float messageTimer = 0;
@@ -129,7 +130,7 @@ public class GameScreen implements Screen {
         playerLevelLabel = new Label("Poziom: " + player.getLevel(), skin);
         playerExpLabel = new Label("Exp: " + player.getExp(), skin);
         expToNextLevelLabel = new Label("Exp do kolejnego poziomu: " + player.getExpToNextLevel(), skin);
-
+        inventoryCapacityLabel = new Label(getInventoryCapacityText(), skin);
         if (saveSlot > 0 && saveManager.saveExists(saveSlot)) {
             loadGame(saveSlot);
         }
@@ -185,6 +186,7 @@ public class GameScreen implements Screen {
         leftSideMenu.add(playerLevelLabel).left().row();
         leftSideMenu.add(playerExpLabel).left().row();
         leftSideMenu.add(expToNextLevelLabel).left().row();
+        leftSideMenu.add(inventoryCapacityLabel).left().row();
 
         // Górny pasek (czas, pogoda i pieniądze)
         Table topBar = new Table();
@@ -205,8 +207,10 @@ public class GameScreen implements Screen {
         TextButton openPlantChooserButton = getPlantChooserButton();
         // Okno Magazynu
         TextButton openSellWindowButton = getInventoryButton();
+        TextButton upgradeStorageButton = getStorageUpgradeButton();
         sidebar.add(openPlantChooserButton).expandX().fillX().padTop(10).row();
         sidebar.add(openSellWindowButton).expandX().fillX().padTop(10).row();
+        sidebar.add(upgradeStorageButton).expandX().fillX().padTop(10).row();
 
         feedButton = new TextButton("Nakarm", skin);
         waterButton = new TextButton("Podlej", skin);
@@ -676,10 +680,14 @@ public class GameScreen implements Screen {
                         adjustedSellPrice
                     );
 
-                    player.getPlayerInventory().addItem(newItem);
-                    plot.harvest();
-                    player.addExp(1);
-                    updatePlayerStatus();
+                    boolean added = player.getPlayerInventory().addItem(newItem);
+                    if (added) {
+                        plot.harvest();
+                        player.addExp(1);
+                        updatePlayerStatus();
+                    } else {
+                        MessageManager.warning("Brak miejsca w magazynie!");
+                    }
                 }
             }
             case FERTILIZE -> {
@@ -812,6 +820,12 @@ public class GameScreen implements Screen {
 
                 case HARVEST -> {
                     if (productState == Animal.ProductState.READY) {
+                        int toCollect = selectedAnimal.getProductCount() > 0 ? selectedAnimal.getProductCount() : 1;
+                        if (player.getPlayerInventory().getUsedCapacity() + toCollect > player.getInventoryCapacity()) {
+                            MessageManager.warning("Brak miejsca w magazynie!");
+                            break;
+                        }
+
                         int collected = selectedAnimal.collectProduct();
                         if (collected > 0) {
                             String productName = selectedAnimal.getType().getProductName();
@@ -902,6 +916,32 @@ public class GameScreen implements Screen {
             }
         });
         return openSellWindowButton;
+    }
+
+    private TextButton getStorageUpgradeButton() {
+        TextButton upgradeButton = new TextButton("Ulepsz magazyn", skin);
+        upgradeButton.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                StorageUpgradeWindow window = new StorageUpgradeWindow(
+                        "Ulepsz magazyn",
+                        skin,
+                        player,
+                        () -> {
+                            updatePlayerStatus();
+                            if (currentInventoryWindow != null && currentInventoryWindow.getStage() != null) {
+                                currentInventoryWindow.refreshInventory();
+                            }
+                        }
+                );
+                stage.addActor(window);
+                window.setPosition(
+                        (stage.getWidth() - window.getWidth()) / 2f,
+                        (stage.getHeight() - window.getHeight()) / 2f
+                );
+            }
+        });
+        return upgradeButton;
     }
 
     private TextButton getSellAllButton() {
@@ -1269,6 +1309,11 @@ public class GameScreen implements Screen {
         weatherLabel.setText(weatherText);
     }
 
+    private String getInventoryCapacityText() {
+        return "Magazyn: " + player.getUsedInventorySpace() + "/" + player.getInventoryCapacity();
+    }
+
+
     private String getPolishWeekDay(GameClock.WeekDay weekDay) {
         return switch (weekDay){
             case MONDAY -> "Poniedziałek";
@@ -1308,6 +1353,7 @@ public class GameScreen implements Screen {
         playerLevelLabel.setText("Poziom: " + player.getLevel());
         playerExpLabel.setText("Exp: " + player.getExp());
         expToNextLevelLabel.setText("Exp do kolejnego poziomu: " + player.getExpToNextLevel());
+        inventoryCapacityLabel.setText(getInventoryCapacityText());
     }
 
     private boolean hasUnlockedNeighborPlot(int x, int y) {
