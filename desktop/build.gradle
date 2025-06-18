@@ -22,5 +22,9 @@ java {
 }
 
 application {
-  mainClass = 'com.farmgame.desktop.DesktopLauncher'
+  mainClass = 'com.farmgame.DesktopLauncher'
+}
+
+run {
+  workingDir = rootDir
 }
