@@ -39,7 +39,7 @@ public class Player {
             List<String> unlockedAnimals = AnimalDatabase.getByLevel(level);
 
 
-            float delay = 0f;
+            float delay = 0.5f;
             Timer.schedule(new Timer.Task() {
                 @Override
                 public void run() {
