@@ -8,6 +8,7 @@ import com.badlogic.gdx.utils.JsonWriter;
 import com.farmgame.game.*;
 import com.farmgame.player.InventoryItem;
 import com.farmgame.player.Player;
+import com.farmgame.quest.QuestManager;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -57,7 +58,7 @@ public class SaveManager {
     // Konwertuj obiekt gry do stanu zapisu
     public GameState convertToSaveState(Player player, Farm farm, GameClock gameClock,
                                         Weather weather, PlantType selectedPlant,
-                                        String currentAction) {
+                                        String currentAction, QuestManager questManager) {
         // Konwertuj gracza
         SavedPlayer savedPlayer = new SavedPlayer();
         savedPlayer.name = player.getName();
@@ -162,13 +163,28 @@ public class SaveManager {
             weather.getTimeUntilChange()
         );
 
+        ArrayList<SavedQuest> savedQuests = new java.util.ArrayList<>();
+        if (questManager != null) {
+            for (com.farmgame.quest.Quest q : questManager.getQuests()) {
+                savedQuests.add(new SavedQuest(
+                        q.getName(),
+                        q.getItemName(),
+                        q.getRequiredQuantity(),
+                        q.getRewardMoney(),
+                        q.getRewardExp(),
+                        q.isClaimed()
+                ));
+            }
+        }
+
         return new GameState(
             savedPlayer,
             savedFarm,
             savedClock,
             savedWeather,
             selectedPlant != null ? selectedPlant.getName() : null,
-            currentAction
+            currentAction,
+                savedQuests
         );
     }
 
@@ -190,19 +206,19 @@ public class SaveManager {
 
     // Zapisywanie stanu gry
     public void saveGame(Player player, Farm farm, GameClock gameClock,
-                         Weather weather, PlantType selectedPlant, String currentAction) {
-        saveGame(player, farm, gameClock, weather, selectedPlant, currentAction, 1);
+                         Weather weather, PlantType selectedPlant, String currentAction, QuestManager questManager) {
+        saveGame(player, farm, gameClock, weather, selectedPlant, currentAction, questManager, 1);
     }
 
     public void saveGame(Player player, Farm farm, GameClock gameClock,
-                         Weather weather, PlantType selectedPlant, String currentAction, int slot) {
+                         Weather weather, PlantType selectedPlant, String currentAction, QuestManager questManager, int slot) {
         try {
             if (slot < 1 || slot > MAX_SAVE_SLOTS) {
                 slot = 1;
             }
 
             GameState gameState = convertToSaveState(player, farm, gameClock,
-                weather, selectedPlant, currentAction);
+                    weather, selectedPlant, currentAction, questManager);
 
             gameState.difficultyMultiplier = difficultyManager.getDifficultyMultiplier();
 
@@ -251,7 +267,7 @@ public class SaveManager {
 
     // Metoda do aplikowania wczytanego stanu do obiektów gry
     public void applyGameState(GameState gameState, Player player, Farm farm,
-                               GameClock gameClock, Weather weather) {
+                               GameClock gameClock, Weather weather, com.farmgame.quest.QuestManager questManager) {
         if (gameState == null) return;
 
         try {
@@ -375,6 +391,23 @@ public class SaveManager {
             if (gameState.weather != null) {
                 weather.setCurrentWeather(gameState.weather.currentWeather);
                 weather.setTimeUntilChange(gameState.weather.timeUntilChange);
+            }
+
+            if (questManager != null) {
+                questManager.clear();
+                if (gameState.quests != null) {
+                    for (SavedQuest sq : gameState.quests) {
+                        com.farmgame.quest.Quest q = new com.farmgame.quest.Quest(
+                                sq.name,
+                                sq.itemName,
+                                sq.requiredQuantity,
+                                sq.rewardMoney,
+                                sq.rewardExp
+                        );
+                        q.setClaimed(sq.claimed);
+                        questManager.addQuest(q);
+                    }
+                }
             }
 
             Gdx.app.log("SaveManager", "Stan gry przywrócony pomyślnie");

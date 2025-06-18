@@ -21,6 +21,8 @@ import com.farmgame.game_save.GameState;
 import com.farmgame.player.InventoryItem;
 import com.farmgame.player.Player;
 import com.farmgame.game_save.SaveManager;
+import com.farmgame.quest.Quest;
+import com.farmgame.quest.QuestManager;
 import com.farmgame.ui.*;
 
 
@@ -37,6 +39,7 @@ public class GameScreen implements Screen {
     private final BitmapFont font = new BitmapFont();
 
     private SaveManager saveManager;
+    private final QuestManager questManager = new QuestManager();
 
     private final Stage stage;
     private final Skin skin;
@@ -125,6 +128,7 @@ public class GameScreen implements Screen {
             int startingMoney = (int)(player.getMoney() * saveManager.getDifficultyMultiplier());
             this.player.setMoney(startingMoney);
         }
+        questManager.loadFromDatabase();
 
         playerNameLabel = new Label("Imie: " + player.getName(), skin);
         playerLevelLabel = new Label("Poziom: " + player.getLevel(), skin);
@@ -208,9 +212,11 @@ public class GameScreen implements Screen {
         // Okno Magazynu
         TextButton openSellWindowButton = getInventoryButton();
         TextButton upgradeStorageButton = getStorageUpgradeButton();
+        TextButton questButton = getQuestButton();
         sidebar.add(openPlantChooserButton).expandX().fillX().padTop(10).row();
         sidebar.add(openSellWindowButton).expandX().fillX().padTop(10).row();
         sidebar.add(upgradeStorageButton).expandX().fillX().padTop(10).row();
+        sidebar.add(questButton).expandX().fillX().padTop(10).row();
 
         feedButton = new TextButton("Nakarm", skin);
         waterButton = new TextButton("Podlej", skin);
@@ -416,7 +422,7 @@ public class GameScreen implements Screen {
                 case FERTILIZE -> "FERTILIZE";
             };
 
-            saveManager.saveGame(player, farm, gameClock, weather, selectedPlant, currentActionStr, currentSaveSlot);
+            saveManager.saveGame(player, farm, gameClock, weather, selectedPlant, currentActionStr, questManager, currentSaveSlot);
             showMessage("Gra zapisana w slocie " + currentSaveSlot + "!", Color.GREEN);
         } catch (Exception e) {
             showMessage("Błąd podczas zapisywania!", Color.RED);
@@ -589,7 +595,7 @@ public class GameScreen implements Screen {
         try {
             GameState gameState = saveManager.loadGame(slot);
             if (gameState != null) {
-                saveManager.applyGameState(gameState, player, farm, gameClock, weather);
+                saveManager.applyGameState(gameState, player, farm, gameClock, weather, questManager);
 
                 farm.setDifficultyMultiplier(saveManager.getDifficultyMultiplier());
 
@@ -943,6 +949,29 @@ public class GameScreen implements Screen {
         });
         return upgradeButton;
     }
+
+    private TextButton getQuestButton() {
+        TextButton questBtn = new TextButton("Zadania", skin);
+        questBtn.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                QuestWindow window = new QuestWindow(
+                        "Zadania",
+                        skin,
+                        questManager,
+                        player,
+                        () -> updatePlayerStatus()
+                );
+                stage.addActor(window);
+                window.setPosition(
+                        (stage.getWidth() - window.getWidth()) / 2f,
+                        (stage.getHeight() - window.getHeight()) / 2f
+                );
+            }
+        });
+        return questBtn;
+    }
+
 
     private TextButton getSellAllButton() {
         TextButton sellAllButton = new TextButton("Sprzedaj wszystko", skin);
@@ -1350,6 +1379,7 @@ public class GameScreen implements Screen {
     }
 
     public void updatePlayerStatus(){
+        questManager.checkQuests(player);
         playerLevelLabel.setText("Poziom: " + player.getLevel());
         playerExpLabel.setText("Exp: " + player.getExp());
         expToNextLevelLabel.setText("Exp do kolejnego poziomu: " + player.getExpToNextLevel());
