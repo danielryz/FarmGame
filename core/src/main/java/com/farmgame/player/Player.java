@@ -9,6 +9,7 @@ import com.farmgame.game.PlantDatabase;
 import java.util.List;
 
 public class Player {
+    public static final int BASE_INVENTORY_CAPACITY = 100;
     private String name;
     private int money;
     private int level;
@@ -22,7 +23,7 @@ public class Player {
         this.level = 1;
         this.exp = 0;
         this.expToNextLevel = 10;
-        this.inventory = new Inventory();
+        this.inventory = new Inventory(BASE_INVENTORY_CAPACITY);
     }
 
     public void addExp(int amount) {
@@ -99,6 +100,18 @@ public class Player {
 
     public Inventory getPlayerInventory() {
         return inventory;
+    }
+
+    public int getInventoryCapacity() {
+        return inventory.getCapacity();
+    }
+
+    public int getUsedInventorySpace() {
+        return inventory.getUsedCapacity();
+    }
+
+    public void increaseInventoryCapacity(int amount) {
+        inventory.setCapacity(inventory.getCapacity() + amount);
     }
 
     public void setName(String name) {

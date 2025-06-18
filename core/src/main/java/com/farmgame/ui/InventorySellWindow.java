@@ -14,6 +14,7 @@ public class InventorySellWindow extends Window {
     private final Player player;
 
     private final Table contentTable;
+    private final Label capacityLabel;
     public InventorySellWindow(String title, Skin skin, Player player, Runnable onSellCallback) {
         super(title, skin);
 
@@ -28,12 +29,15 @@ public class InventorySellWindow extends Window {
         contentTable = new Table();
         contentTable.defaults().pad(5);
 
+        capacityLabel = new Label("", skin);
+        contentTable.add(capacityLabel).left().colspan(2).row();
+
         rebuildItemList(player);
 
         ScrollPane scrollPane = new ScrollPane(contentTable, skin);
         scrollPane.setFadeScrollBars(false);
 
-
+        TextButton upgradeButton = new TextButton("Ulepsz", skin);
         TextButton closeButton = new TextButton("Zamknij", skin);
         closeButton.addListener(new ChangeListener() {
             @Override
@@ -41,15 +45,39 @@ public class InventorySellWindow extends Window {
                 remove();
             }
         });
-
+        upgradeButton.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                StorageUpgradeWindow window = new StorageUpgradeWindow(
+                    "Ulepsz magazyn",
+                    skin,
+                    player,
+                    () -> {
+                        refreshInventory();
+                        if (onSellCallback != null) onSellCallback.run();
+                    }
+                );
+                getStage().addActor(window);
+                window.setPosition(
+                    (getStage().getWidth() - window.getWidth()) / 2f,
+                    (getStage().getHeight() - window.getHeight()) / 2f
+                );
+            }
+        });
         this.add(scrollPane).expand().fill().row();
-        this.add(closeButton).pad(10);
+        Table bottom = new Table();
+        bottom.add(upgradeButton).pad(10);
+        bottom.add(closeButton).pad(10);
+        this.add(bottom);
     }
 
     private void rebuildItemList(Player player){
         contentTable.clearChildren();
 
         Inventory inventory = player.getPlayerInventory();
+
+        capacityLabel.setText("Pojemność: " + inventory.getUsedCapacity() + "/" + inventory.getCapacity());
+        contentTable.add(capacityLabel).left().colspan(2).row();
 
         for(InventoryItem item : inventory.getItems()){
             String itemInfoText = String.format(

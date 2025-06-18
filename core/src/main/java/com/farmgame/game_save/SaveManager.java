@@ -64,7 +64,7 @@ public class SaveManager {
         savedPlayer.money = player.getMoney();
         savedPlayer.level = player.getLevel();
         savedPlayer.exp = player.getExp();
-
+        savedPlayer.inventoryCapacity = player.getInventoryCapacity();
         // Konwertuj inwentarz
         savedPlayer.inventory = new ArrayList<>();
         for (InventoryItem item : player.getPlayerInventory().getItems()) {
@@ -261,6 +261,9 @@ public class SaveManager {
                 player.setMoney(gameState.player.money);
                 player.setLevel(gameState.player.level);
                 player.setExp(gameState.player.exp);
+
+                int cap = gameState.player.inventoryCapacity > 0 ? gameState.player.inventoryCapacity : Player.BASE_INVENTORY_CAPACITY;
+                player.getPlayerInventory().setCapacity(cap);
 
                 // Wyczyść i przywróć inwentarz
                 player.getPlayerInventory().clearInventory();
