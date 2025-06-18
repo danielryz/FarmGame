@@ -2,6 +2,7 @@ package com.farmgame.game;
 
 import com.badlogic.gdx.graphics.Color;
 import com.farmgame.game_save.SavedAnimal;
+import com.farmgame.game_save.SavedInventoryItem;
 
 import java.util.Random;
 
@@ -106,14 +107,16 @@ public class Weather {
         public String state; // BLOCKED, EMPTY, OCCUPIED
         public int capacity;
         public SavedAnimal[] animals;
+        public SavedInventoryItem[] feedStock;
 
         public SavedAnimalPen() {}
 
-        public SavedAnimalPen(boolean isBlocked, String state, int capacity, SavedAnimal[] animals) {
+        public SavedAnimalPen(boolean isBlocked, String state, int capacity, SavedAnimal[] animals, SavedInventoryItem[] feedStock) {
             this.isBlocked = isBlocked;
             this.state = state;
             this.capacity = capacity;
             this.animals = animals;
+            this.feedStock = feedStock;
         }
     }
 }

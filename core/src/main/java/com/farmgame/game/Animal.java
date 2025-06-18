@@ -1,5 +1,7 @@
 package com.farmgame.game;
 
+import com.badlogic.gdx.scenes.scene2d.ui.Table;
+
 public class Animal {
 
     public enum ProductState {
@@ -10,6 +12,7 @@ public class Animal {
     private ProductState productState;
     private float timeToNextProduct;
     private DifficultyManager difficultyManager;
+    private int productCount;
 
 
     public Animal(AnimalType type) {
@@ -21,6 +24,7 @@ public class Animal {
         this.timeToNextProduct = 0f;
         this.productState = ProductState.NOT_FED;
         this.difficultyManager = difficultyManager;
+        this.productCount = 0;
     }
 
     public void update(float delta){
@@ -33,28 +37,31 @@ public class Animal {
         }
     }
 
-    public boolean fed(String plantName){
-        if(productState != ProductState.NOT_FED){
+    public boolean fed(String plantName, int quantity){
+        if(productState != ProductState.NOT_FED || quantity <= 0){
             System.out.println("Nie można nakarmić.");
             return false;
         }
 
         if (type.getFeedSet().contains(plantName)) {
             productState = ProductState.PRODUCTION;
-            timeToNextProduct = type.getProductTime() * difficultyManager.getTimeMultiplier();
-            System.out.println("Nakarmiono zwierzę rośliną: " + plantName);
+            productCount = quantity;
+            timeToNextProduct = (type.getProductTime() * difficultyManager.getTimeMultiplier()) / quantity;
+            System.out.println("Nakarmiono zwierzę rośliną: " + plantName + " x" + quantity);
             return true;
         }
         return false;
     }
 
-    public boolean collectProduct(){
+    public int collectProduct(){
         if(productState == ProductState.READY){
             productState = ProductState.NOT_FED;
-            System.out.println("Zebrano produkt.");
-            return true;
+            int produced = productCount > 0 ? productCount : 1;
+            productCount = 0;
+            System.out.println("Zebrano produkt x" + produced);
+            return produced;
         }
-        return false;
+        return 0;
     }
 
     public AnimalType getType() {
@@ -75,5 +82,12 @@ public class Animal {
 
     public void setTimeToNextProduct(float timeToNextProduct) {
         this.timeToNextProduct = timeToNextProduct;
+    }
+    public int getProductCount() {
+        return productCount;
+    }
+
+    public void setProductCount(int productCount) {
+        this.productCount = productCount;
     }
 }

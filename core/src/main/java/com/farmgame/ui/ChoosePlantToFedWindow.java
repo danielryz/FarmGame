@@ -17,9 +17,9 @@ import java.util.List;
 
 public class ChoosePlantToFedWindow extends Window {
 
-    private final OnPlantChosenListener chosenListener;
+    private final OnFeedChosenListener chosenListener;
 
-    public ChoosePlantToFedWindow(String title, Skin skin, Player player, AnimalType animalType, OnPlantChosenListener chosenListener) {
+    public ChoosePlantToFedWindow(String title, Skin skin, Player player, AnimalType animalType, OnFeedChosenListener chosenListener) {
         super(title, skin);
 
         this.chosenListener = chosenListener;
@@ -69,8 +69,27 @@ public class ChoosePlantToFedWindow extends Window {
                 chooseButton.addListener(new ChangeListener() {
                     @Override
                     public void changed(ChangeEvent event, Actor actor) {
-                        chosenListener.onChosen(type);
-                        remove();
+                        final TextField qtyField = new TextField("1", skin);
+                        Dialog quantityDialog = new Dialog("Ilość", skin) {
+                            @Override
+                            protected void result(Object obj) {
+                                if (Boolean.TRUE.equals(obj)) {
+                                    int qty = 1;
+                                    try {
+                                        qty = Integer.parseInt(qtyField.getText());
+                                    } catch (NumberFormatException ignored) {}
+                                    if (qty < 1) qty = 1;
+                                    if (qty > quantity) qty = quantity;
+                                    chosenListener.onChosen(type, qty);
+                                    ChoosePlantToFedWindow.this.remove();
+                                }
+                            }
+                        };
+                        quantityDialog.getContentTable().add(new Label("Ilość (max " + quantity + ")", skin)).row();
+                        quantityDialog.getContentTable().add(qtyField).width(100);
+                        quantityDialog.button("OK", true);
+                        quantityDialog.button("Anuluj", false);
+                        quantityDialog.show(getStage());
                     }
                 });
 
