@@ -778,31 +778,20 @@ public class GameScreen implements Screen {
                                 skin,
                                 player,
                                     selectedAnimal.getType(),
-                                chosenPlant -> {
+                                    (chosenPlant, qty) -> {
                                     int available = player.getPlayerInventory().getQuantity(chosenPlant.getName());
-                                    int fedCount = 0;
-
-                                    for (Animal a : pen.getAnimals()) {
-                                        if (available <= 0) break;
-                                        if (a.getProductState() == Animal.ProductState.NOT_FED) {
-                                            boolean fed = a.fed(chosenPlant.getName());
-                                            if (fed) {
-                                                player.getPlayerInventory().removeItem(chosenPlant.getName(), 1);
-                                                available--;
-                                                fedCount++;
-                                            }
-                                        }
+                                        if (available < qty) {
+                                            MessageManager.warning("Brak wystarczającej ilości " + chosenPlant.getName());
+                                            return;
                                     }
-                                    if (fedCount > 0) {
-                                        MessageManager.info("Nakarmiono " + fedCount + " zwierząt rośliną: " + chosenPlant.getName());
-                                        player.addExp(fedCount);
+                                        pen.addFeed(chosenPlant.getName(), qty);
+                                        player.getPlayerInventory().removeItem(chosenPlant.getName(), qty);
+                                        MessageManager.info("Dodano do zagrody " + qty + " x " + chosenPlant.getName());
+                                        player.addExp(qty);
                                         updatePlayerStatus();
 
                                         if (currentInventoryWindow != null && currentInventoryWindow.getStage() != null) {
                                             currentInventoryWindow.refreshInventory();
-                                        }
-                                    } else {
-                                        MessageManager.warning("Nie udało się nakarmić zwierząt.");
                                     }
                                 }
                             );
@@ -823,18 +812,19 @@ public class GameScreen implements Screen {
 
                 case HARVEST -> {
                     if (productState == Animal.ProductState.READY) {
-                        boolean collected = selectedAnimal.collectProduct();
-                        if (collected) {
+                        int collected = selectedAnimal.collectProduct();
+                        if (collected > 0) {
                             String productName = selectedAnimal.getType().getProductName();
                             int baseSellPrice = selectedAnimal.getType().getSellPrice();
                             int adjustedSellPrice = (int)(baseSellPrice / saveManager.getDifficultyMultiplier());
 
-                            InventoryItem newItem = new InventoryItem(productName, 1, adjustedSellPrice);
+                            InventoryItem newItem = new InventoryItem(productName, collected, adjustedSellPrice);
                             player.getPlayerInventory().addItem(newItem);
 
-                            MessageManager.info("Zebrano produkt: " + productName);
-                            player.addExp(1);
+                            MessageManager.info("Zebrano produkt: " + productName + " x " + collected);
+                            player.addExp(collected);
                             updatePlayerStatus();
+                            pen.feedAllIfPossible();
                         } else {
                             MessageManager.warning("Nie udało się zebrać produktu.");
                         }

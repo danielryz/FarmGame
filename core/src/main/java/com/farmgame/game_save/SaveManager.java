@@ -10,7 +10,9 @@ import com.farmgame.player.InventoryItem;
 import com.farmgame.player.Player;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class SaveManager {
     private static final String SAVE_FILE_TEMPLATE = "farmgame_save_%d.json";
@@ -123,16 +125,24 @@ public class SaveManager {
                                 animal.getType().getName(),
                                 animal.getProductState().name(),
                                 animal.getTimeToNextProduct(),
-                                colorToHex(animal.getType().getColor())
+                                colorToHex(animal.getType().getColor()),
+                                animal.getProductCount()
                         ));
                     }
 
+                    List<SavedInventoryItem> savedFeed = new ArrayList<>();
+                    for (Map.Entry<String, Integer> entry : pen.getFeedStock().entrySet()) {
+                        if (entry.getValue() > 0) {
+                            savedFeed.add(new SavedInventoryItem(entry.getKey(), entry.getValue(), 0));
+                        }
+                    }
 
                     savedFarm.animalPens[px][py] = new Weather.SavedAnimalPen(
-                        pen.isBlocked(),
-                        pen.getState().name(),
+                            pen.isBlocked(),
+                            pen.getState().name(),
                             pen.getCapacity(),
-                            savedAnimals.toArray(new SavedAnimal[0])
+                            savedAnimals.toArray(new SavedAnimal[0]),
+                            savedFeed.toArray(new SavedInventoryItem[0])
                     );
                 }
             }
@@ -327,11 +337,20 @@ public class SaveManager {
                                             Animal animal = new Animal(animalType);
                                             animal.setProductState(Animal.ProductState.valueOf(savedAnimal.productState));
                                             animal.setTimeToNextProduct(savedAnimal.timeToNextProduct);
+                                            animal.setProductCount(savedAnimal.productCount);
                                             animals.add(animal);
                                         }
                                     }
                                     pen.setAnimals(animals);
                                     pen.setState(AnimalPen.State.valueOf(savedPen.state));
+
+                                    if (savedPen.feedStock != null) {
+                                        Map<String, Integer> stock = new HashMap<>();
+                                        for (SavedInventoryItem item : savedPen.feedStock) {
+                                            stock.put(item.name, item.quantity);
+                                        }
+                                        pen.setFeedStock(stock);
+                                    }
                                 }
                             }
 

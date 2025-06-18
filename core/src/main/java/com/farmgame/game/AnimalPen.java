@@ -3,7 +3,9 @@ package com.farmgame.game;
 import com.farmgame.player.Player;
 import com.farmgame.game.AnimalType;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class AnimalPen {
 
@@ -20,6 +22,7 @@ public class AnimalPen {
     private static final int MAX_CAPACITY = 9;
     private AnimalType allowedType = null;
     private DifficultyManager difficultyManager;
+    private Map<String, Integer> feedStock;
 
     public AnimalPen(int x, int y) {
         this(x, y, new DifficultyManager());
@@ -32,6 +35,7 @@ public class AnimalPen {
         this.animals = new ArrayList<>();
         this.allowedType = null;
         this.difficultyManager = difficultyManager;
+        this.feedStock = new HashMap<>();
     }
 
     public State getState() {
@@ -98,6 +102,41 @@ public class AnimalPen {
         for (Animal animal : animals) {
             animal.update(delta);
         }
+        autoFeedAnimals();
+    }
+
+    private void autoFeedAnimals() {
+        for (Animal animal : animals) {
+            if (animal.getProductState() == Animal.ProductState.NOT_FED) {
+                for (String feed : animal.getType().getFeedSet()) {
+                    int qty = feedStock.getOrDefault(feed, 0);
+                    if (qty > 0) {
+                        if (animal.fed(feed, 1)) {
+                            feedStock.put(feed, qty - 1);
+                        }
+                        break;
+                    }
+                }
+            }
+        }
+    }
+
+    public void addFeed(String plantName, int quantity) {
+        if (quantity <= 0) return;
+        feedStock.put(plantName, feedStock.getOrDefault(plantName, 0) + quantity);
+        autoFeedAnimals();
+    }
+
+    public void feedAllIfPossible() {
+        autoFeedAnimals();
+    }
+
+    public Map<String, Integer> getFeedStock() {
+        return feedStock;
+    }
+
+    public void setFeedStock(Map<String, Integer> stock) {
+        this.feedStock = stock != null ? new HashMap<>(stock) : new HashMap<>();
     }
 
     public DifficultyManager getDifficultyManager() {
