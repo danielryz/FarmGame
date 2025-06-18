@@ -40,7 +40,7 @@ public class AnimalSelectionWindow extends Window {
         this.setModal(true);
         this.setMovable(true);
         this.setKeepWithinStage(true);
-        this.setSize(300, 400);
+        this.setSize(400, 800);
 
         Table contentTable = new Table();
         contentTable.defaults().pad(5);
