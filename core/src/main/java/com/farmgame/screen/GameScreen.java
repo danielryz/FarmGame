@@ -292,10 +292,10 @@ public class GameScreen implements Screen {
         buyFertilizerButton.addListener(new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
-                int cost = 20;
+                int cost = 10;
                 if (player.getMoney() >= cost) {
                     player.addMoney(-cost);
-                    player.getPlayerInventory().addItem(new InventoryItem("Fertilizer", 1, 0));
+                    player.getPlayerInventory().addItem(new InventoryItem("Fertilizer", 1, cost));
                     updatePlayerStatus();
                     MessageManager.info("Kupiono nawóz");
                 } else {
@@ -697,9 +697,10 @@ public class GameScreen implements Screen {
                 }
             }
             case FERTILIZE -> {
-                if (plot.getPlant() != null && plot.getState() != Plot.State.READY_TO_HARVEST) {
+                if (plot.getPlant() != null && plot.getState() != Plot.State.READY_TO_HARVEST && !plot.getPlant().isFertilized()) {
                     if (player.getPlayerInventory().getQuantity("Fertilizer") > 0) {
                         plot.applyFertilizer(30f);
+                        plot.getPlant().setFertilized(true);
                         player.getPlayerInventory().removeItem("Fertilizer", 1);
                         player.addExp(1);
                         updatePlayerStatus();

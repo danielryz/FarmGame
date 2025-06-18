@@ -5,6 +5,7 @@ public class Plant {
     private float currentGrowthTime;
     private boolean watered;
     private boolean autoWatered;
+    private boolean fertilized;
     private float fertilizerTimer;
     private DifficultyManager difficultyManager;
 
@@ -17,6 +18,7 @@ public class Plant {
         this.currentGrowthTime = 0f;
         this.watered = false;
         this.autoWatered = false;
+        this.fertilized = false;
         this.fertilizerTimer = 0f;
         this.difficultyManager = difficultyManager;
     }
@@ -36,6 +38,8 @@ public class Plant {
     public void setAutoWatered(boolean autoWatered) { this.autoWatered = autoWatered; }
 
     public void applyFertilizer(float duration) { if (duration > fertilizerTimer) fertilizerTimer = duration; }
+
+    public boolean isFertilized() { return fertilized; }
 
 
     public void update(float delta) {
@@ -59,6 +63,7 @@ public class Plant {
 
     public void resetWatered() {
         watered = false;
+        fertilized = false;
     }
 
     public boolean isReadyToHarvest(){
@@ -97,6 +102,9 @@ public class Plant {
 
     public void setWatered(boolean isWatered) {
         this.watered = isWatered;
+    }
+    public void setFertilized(boolean isFertilized) {
+        this.fertilized = isFertilized;
     }
 
     public enum GrowthStage {
